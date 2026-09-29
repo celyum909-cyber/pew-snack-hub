@@ -1,1 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snack Hub Manager</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ed0015">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hub Manager">
+<style>
+:root{--bg:#0c1224;--surface:#151b30;--surface2:#1d2440;--line:#2c3454;--red:#ed0015;--blue:#0756d9;--ink:#fff;--dim:#c7ccdb;--faint:#8a92ad;--ok:#3ee06b;--yellow:#ffe340;color-scheme:dark;font-family:Arial,Helvetica,sans-serif}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+.wrap{max-width:640px;margin:0 auto;padding:16px 14px 90px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px}
+.brand img{width:38px;height:38px;border-radius:10px}
+.btn{border:0;border-radius:12px;padding:14px 18px;font-weight:800;font-size:15px;cursor:pointer}
+.btn-red{background:var(--red);color:#fff}.btn-red:disabled{opacity:.55}
+.btn-line{background:var(--surface2);border:1px solid var(--line)}
+.btn-ghost{background:none;color:var(--dim);text-decoration:underline;padding:10px}
+/* login */
+.gate{max-width:380px;margin:9vh auto 0;text-align:center}
+.gate .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px 20px}
+.gate img.logo{width:96px;height:96px;border-radius:22px}
+.gate h1{font-size:22px;margin:14px 0 6px}.gate p{color:var(--dim);font-size:14px;line-height:1.5;margin:0 0 18px}
+.gate input[type=password]{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);font-size:16px}
+.gate input:focus,.field input:focus,.field textarea:focus,.search:focus{outline:2px solid var(--red);border-color:transparent}
+.remember{display:flex;gap:10px;align-items:center;margin:14px 2px 0;font-size:14px;color:var(--dim);text-align:left}
+.remember input{width:20px;height:20px;accent-color:var(--red)}
+.gate .btn{width:100%;margin-top:16px}
+.err{color:#ff7a80;font-size:13px;min-height:18px;margin-top:12px}
+.tip{margin-top:16px;font-size:12.5px;color:var(--faint);line-height:1.5;text-align:left}
+/* list */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.role{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--dim)}
+.links{display:flex;gap:16px;font-size:13px;margin:0 0 12px}.links a,.links button{color:var(--dim);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;font-size:13px}
+.search{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);font-size:16px;margin-bottom:6px}
+h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--yellow);margin:22px 2px 8px}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:9px;margin-bottom:8px;cursor:pointer}
+.row:active{background:var(--surface2)}
+.thumb{width:52px;height:52px;border-radius:10px;background:var(--surface2);flex:none;object-fit:cover;border:1px dashed var(--line)}
+.thumb.has{border:0}
+.row .meta{flex:1;min-width:0}.row .nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .pr{color:var(--dim);font-size:13px;margin-top:2px}.row .empty{color:var(--faint);font-style:italic}
+.tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:3px 6px;margin-left:6px;vertical-align:1px}
+.tag.hid{background:#5a1d24;color:#ff9aa0}.tag.ed{background:#153a6b;color:#8ec1ff}
+.chev{color:var(--faint);font-size:20px}
+.loading{color:var(--dim);text-align:center;padding:40px 0}
+/* editor */
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:50;overflow:auto;padding:env(safe-area-inset-top,0) 0 0}
+.sheet .wrap{padding-bottom:130px}
+.sheet h1{font-size:20px;margin:6px 0 4px}.sheet .sub{color:var(--faint);font-size:13px;margin:0 0 16px}
+.photo{width:190px;height:190px;border-radius:16px;background:var(--surface2);border:1px dashed var(--line);object-fit:cover;display:block;margin:0 auto}
+.photo.has{border:0}
+.photobtn{display:block;margin:12px auto 4px;width:220px;text-align:center}
+.hint{font-size:12px;color:var(--faint);line-height:1.45;margin:6px 0 0}
+.field{display:flex;flex-direction:column;gap:6px;margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.field input,.field textarea{padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);font-size:16px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);width:100%}
+.field textarea{min-height:110px;resize:vertical}
+.check{display:flex;gap:10px;align-items:center;margin-top:18px;font-size:14px;color:var(--dim)}.check input{width:20px;height:20px;accent-color:var(--red)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(12,18,36,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0))}
+.bar-in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center}.bar .btn-red{flex:1}
+.msg{max-width:640px;margin:0 auto 8px;font-size:13px;color:var(--dim);min-height:18px}.msg.ok{color:var(--ok)}.msg.bad{color:#ff7a80}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0));background:#0f3d1f;color:#b6f5c8;border:1px solid #1f7a3d;border-radius:12px;padding:12px 16px;font-size:14px;font-weight:700;z-index:99;max-width:90%}
+</style>
+</head>
+<body>
 
+<!-- LOGIN -->
+<div class="wrap gate" id="gate" hidden>
+  <div class="card">
+    <img class="logo" src="icon-192.png" alt="">
+    <h1>Snack Hub Manager</h1>
+    <p>Log in to change prices and photos on the Depew Snack Hub app.</p>
+    <form id="loginForm">
+      <input type="password" id="pw" placeholder="Password" autocomplete="current-password" aria-label="Password">
+      <label class="remember"><input type="checkbox" id="keep" checked> Keep me signed in on this phone</label>
+      <button class="btn btn-red" id="loginBtn" type="submit">Log in</button>
+      <div class="err" id="loginErr" role="alert"></div>
+    </form>
+  </div>
+  <div class="tip"><b>Tip:</b> add this to your phone. iPhone: open in Safari, tap Share, then Add to Home Screen. Android: tap the three dots, then Install app.</div>
+</div>
+
+<!-- LIST -->
+<div class="wrap" id="app" hidden>
+  <div class="top">
+    <div class="brand"><img src="icon-192.png" alt="">Snack Hub Manager</div>
+    <span class="role" id="role"></span>
+  </div>
+  <div class="links"><a href="https://celyum909-cyber.github.io/pew-snack-hub/" target="_blank" rel="noopener">View the app</a><a href="https://celyum909-cyber.github.io/pew-snack-hub/owner.html" target="_blank" rel="noopener">Deal of the Day</a><button id="logout" type="button">Log out</button></div>
+  <input class="search" id="search" type="search" placeholder="Search products" aria-label="Search products">
+  <div id="list"><div class="loading">Loading products...</div></div>
+</div>
+
+<!-- EDITOR -->
+<div class="sheet" id="sheet" hidden>
+  <div class="wrap">
+    <button class="btn-ghost" id="back" type="button">&larr; Back to list</button>
+    <h1 id="shTitle"></h1>
+    <p class="sub" id="shSub"></p>
+    <img class="photo" id="photo" alt="Product photo">
+    <label class="btn btn-line photobtn" for="file">Choose or take a photo</label>
+    <input type="file" id="file" accept="image/*" hidden>
+    <p class="hint" style="text-align:center">Photos are cropped to a square. A close-up of the package on a clean background looks best.</p>
+    <label class="field">Name<input id="fName" maxlength="60" autocomplete="off"></label>
+    <label class="field">Flavor or size (small line)<input id="fSub" maxlength="60" autocomplete="off"></label>
+    <label class="field">Price<input id="fPrice" maxlength="30" inputmode="decimal" autocomplete="off" placeholder="$2.99"></label>
+    <p class="hint">Start with a $ sign (like $2.99) so the price tag shows on the photo. You can also type things like "2 for $5".</p>
+    <label class="field">Details (shows when someone taps the product)<textarea id="fDesc" maxlength="600"></textarea></label>
+    <label class="check"><input type="checkbox" id="fHide"> Hide this product from the app</label>
+    <button class="btn-ghost" id="reset" type="button" style="margin-top:14px">Put back the original</button>
+  </div>
+  <div class="bar">
+    <div class="msg" id="msg" role="status"></div>
+    <div class="bar-in"><button class="btn btn-line" id="cancel" type="button">Cancel</button><button class="btn btn-red" id="save" type="button">Save changes</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var API='https://pew-deal.celyum909.workers.dev';
+var KEY='pew-mgr-pw';
+var $=function(id){return document.getElementById(id)};
+var catalog=null, edits={}, pw='', role='', current=null, newPhoto=null, resetFlag=false;
+
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+
+function getSaved(){try{return localStorage.getItem(KEY)||sessionStorage.getItem(KEY)||''}catch(e){return ''}}
+function savePw(p,keep){try{localStorage.removeItem(KEY);sessionStorage.removeItem(KEY);(keep?localStorage:sessionStorage).setItem(KEY,p)}catch(e){}}
+function clearPw(){try{localStorage.removeItem(KEY);sessionStorage.removeItem(KEY)}catch(e){}}
+
+function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+
+async function login(p){
+  var r=await fetch(API+'/login',{method:'POST',headers:{'X-Admin-Password':p}});
+  if(r.status===401)return {ok:false,wrong:true};
+  if(!r.ok)return {ok:false,error:'Login service error ('+r.status+')'};
+  var j=await r.json();return {ok:true,role:j.role};
+}
+
+async function start(p,r){
+  pw=p;role=r;
+  $('gate').hidden=true;$('app').hidden=false;
+  $('role').textContent=role==='owner'?'Owner':'Staff';
+  try{
+    var res=await Promise.all([fetch('catalog.json').then(function(x){return x.json()}),fetch(API+'/products',{cache:'no-store'}).then(function(x){return x.json()})]);
+    catalog=res[0];edits=(res[1]&&res[1].edits)||{};
+    renderList();
+  }catch(e){$('list').innerHTML='';$('list').append(el('div','loading',"Couldn't load the product list. Check your internet and reload."))}
+}
+
+function eff(p){var e=edits[p.id]||{};
+  return {name:e.name||p.name,sub:e.subtitle!=null&&e.subtitle!==''?e.subtitle:p.subtitle,price:e.price||p.price,desc:e.description!=null&&e.description!==''?e.description:p.description,
+    hidden:!!e.hidden,edited:!!e.updated,img:e.img?API+'/products/image/'+p.id+'?v='+e.img:p.thumb};
+}
+
+function renderList(){
+  var q=$('search').value.trim().toLowerCase(),list=$('list');list.innerHTML='';
+  catalog.groups.forEach(function(g){
+    var rows=g.products.filter(function(p){var v=eff(p);return !q||(v.name||'').toLowerCase().indexOf(q)>-1||(v.sub||'').toLowerCase().indexOf(q)>-1||g.title.toLowerCase().indexOf(q)>-1});
+    if(!rows.length)return;
+    list.append(el('h2','grp',g.title));
+    rows.forEach(function(p){
+      var v=eff(p),b=el('button','row');b.type='button';
+      var im=el('img','thumb'+(v.img?' has':''));if(v.img){im.src=v.img}im.alt='';
+      var m=el('div','meta'),nm=el('div','nm');
+      if(v.name){nm.textContent=v.name}else{nm.textContent='Empty spot '+p.n;nm.classList.add('empty')}
+      if(v.hidden){nm.append(el('span','tag hid','Hidden'))}else if(v.edited){nm.append(el('span','tag ed','Edited'))}
+      m.append(nm,el('div','pr',v.name?(v.price||'No price'):'Tap to add a product'));
+      b.append(im,m,el('span','chev','›'));
+      b.addEventListener('click',function(){openEditor(g,p)});
+      list.append(b);
+    });
+  });
+  if(!list.children.length)list.append(el('div','loading','No products match your search.'));
+}
+$('search').addEventListener('input',function(){if(catalog)renderList()});
+
+function setMsg(t,cls){var m=$('msg');m.textContent=t||'';m.className='msg'+(cls?' '+cls:'')}
+
+function openEditor(g,p){
+  current={g:g,p:p};newPhoto=null;resetFlag=false;setMsg('');
+  var v=eff(p);
+  $('shTitle').textContent=v.name||('Empty spot '+p.n);
+  $('shSub').textContent=g.title+' · spot '+p.n+(role?'':'');
+  var ph=$('photo');if(v.img){ph.src=v.img;ph.className='photo has'}else{ph.removeAttribute('src');ph.className='photo'}
+  $('fName').value=v.name||'';$('fSub').value=v.sub||'';$('fPrice').value=(v.price&&v.price!=='Price available in store')?v.price:'';
+  $('fDesc').value=v.desc||'';$('fHide').checked=v.hidden;
+  $('file').value='';$('save').disabled=false;
+  $('sheet').hidden=false;$('sheet').scrollTop=0;
+}
+function closeEditor(){$('sheet').hidden=true;current=null}
+$('back').addEventListener('click',closeEditor);$('cancel').addEventListener('click',closeEditor);
+
+// crop to a square and shrink so uploads are fast
+function processPhoto(file){
+  return new Promise(function(resolve,reject){
+    var url=URL.createObjectURL(file),img=new Image();
+    img.onload=function(){
+      var s=Math.min(img.naturalWidth,img.naturalHeight),size=Math.min(800,s);
+      var c=document.createElement('canvas');c.width=c.height=size;
+      var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,size,size);
+      x.drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,size,size);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){b?resolve(b):reject(new Error('Could not read that photo.'))},'image/jpeg',0.86);
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);reject(new Error("Couldn't open that photo. Try a JPG or PNG."))};
+    img.src=url;
+  });
+}
+$('file').addEventListener('change',async function(){
+  var f=this.files&&this.files[0];if(!f)return;
+  try{setMsg('Preparing photo...');newPhoto=await processPhoto(f);var ph=$('photo');ph.src=URL.createObjectURL(newPhoto);ph.className='photo has';setMsg('Photo ready. Tap Save changes.','ok')}
+  catch(e){newPhoto=null;setMsg(e.message,'bad')}
+});
+
+function toast(t){var d=el('div','toast',t);document.body.append(d);setTimeout(function(){d.remove()},2600)}
+
+async function post(id,form){
+  var r=await fetch(API+'/products/'+id,{method:'POST',headers:{'X-Admin-Password':pw},body:form});
+  if(r.status===401){clearPw();throw new Error('Your password changed. Please log in again.')}
+  var j={};try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j.error||('Save failed ('+r.status+')'));
+  return j;
+}
+
+$('save').addEventListener('click',async function(){
+  if(!current)return;var id=current.p.id,btn=this;
+  var name=$('fName').value.trim();
+  var v=eff(current.p);
+  if(!name&&!v.name&&!newPhoto){setMsg('Add a name or a photo first.','bad');return}
+  btn.disabled=true;setMsg('Saving...');
+  try{
+    var f=new FormData();
+    f.set('name',name);f.set('subtitle',$('fSub').value);f.set('price',$('fPrice').value);f.set('description',$('fDesc').value);
+    f.set('hidden',$('fHide').checked?'1':'0');
+    if(newPhoto)f.set('image',newPhoto,'photo.jpg');
+    var j=await post(id,f);
+    if(j.edit)edits[id]=j.edit;else delete edits[id];
+    renderList();closeEditor();toast('Saved. The app updates in a moment.');
+  }catch(e){setMsg(e.message,'bad');btn.disabled=false;if(/log in again/.test(e.message)){setTimeout(function(){location.reload()},1500)}}
+});
+
+$('reset').addEventListener('click',async function(){
+  if(!current)return;
+  if(!confirm('Put this product back the way it was originally? Your changes and photo for it will be removed.'))return;
+  var id=current.p.id;setMsg('Resetting...');
+  try{var f=new FormData();f.set('reset','1');await post(id,f);delete edits[id];renderList();closeEditor();toast('Put back the original.')}
+  catch(e){setMsg(e.message,'bad')}
+});
+
+$('logout').addEventListener('click',function(){clearPw();location.reload()});
+
+$('loginForm').addEventListener('submit',async function(ev){
+  ev.preventDefault();var p=$('pw').value,b=$('loginBtn');if(!p)return;
+  b.disabled=true;$('loginErr').textContent='';
+  try{
+    var r=await login(p);
+    if(r.ok){savePw(p,$('keep').checked);start(p,r.role)}
+    else{$('loginErr').textContent=r.wrong?'Incorrect password.':r.error}
+  }catch(e){$('loginErr').textContent="Can't reach the internet. Try again."}
+  b.disabled=false;
+});
+
+(async function boot(){
+  var saved=getSaved();
+  if(saved){
+    try{var r=await login(saved);if(r.ok){start(saved,r.role);return}
+      if(r.wrong){clearPw();$('gate').hidden=false;$('loginErr').textContent='Your password changed. Please log in again.';return}}catch(e){}
+  }
+  $('gate').hidden=false;
+})();
+})();
+</script>
+</body>
+</html>
