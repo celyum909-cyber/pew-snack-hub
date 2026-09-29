@@ -1,7 +1,7 @@
 {
-  "name": "Depew Snack Hub",
-  "short_name": "Snack Hub",
-  "description": "Deals and snacks from Depew Snack Hub.",
+  "name": "Snack Hub Manager",
+  "short_name": "Hub Manager",
+  "description": "Change prices and photos for Depew Snack Hub.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
