@@ -1,0 +1,16 @@
+{
+  "id": "./owner.html",
+  "name": "PEW Owner",
+  "short_name": "PEW Owner",
+  "description": "Update the Depew Snack Hub Deal of the Day.",
+  "start_url": "./owner.html",
+  "scope": "./owner.html",
+  "display": "standalone",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    { "src": "owner-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "owner-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "owner-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

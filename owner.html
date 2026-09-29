@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PEW Owner</title>
+<meta name="robots" content="noindex">
+<link rel="manifest" href="owner.webmanifest">
+<meta name="theme-color" content="#0b0b0d">
+<link rel="icon" type="image/png" sizes="192x192" href="owner-icon-192.png">
+<link rel="apple-touch-icon" href="owner-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PEW Owner">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700;800&display=swap">
+<style>
+  :root{
+    --bg:#0b0b0d; --surface:#151417; --surface-2:#1d1c21; --line:#2a292f;
+    --red:#e2262c; --red-2:#ff5a5f; --cyan:#35e6ff;
+    --ink:#f5f4f0; --ink-dim:#b8b6bf; --ink-faint:#77757f;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased;
+    padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);}
+  h1,h2{font-family:'Archivo Black','Arial Black',sans-serif;text-transform:uppercase;letter-spacing:.01em;margin:0;}
+  .wrap{max-width:720px;margin:0 auto;padding:24px 16px 120px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:.02em;}
+  .brand img{width:34px;height:34px;border-radius:9px;}
+  .brand .two{color:var(--red);}
+  .brand .tag{font-family:'Inter';font-weight:800;font-size:10px;letter-spacing:.14em;color:var(--ink-faint);margin-left:4px;}
+
+  /* login */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 22px;}
+  .gate{max-width:380px;margin:12vh auto 0;text-align:center;}
+  .gate h1{font-size:22px;color:#fff;margin:16px 0 8px;}
+  .gate p{color:var(--ink-dim);font-size:14px;line-height:1.5;margin:0 0 20px;}
+  .gate input[type=password]{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:16px;font-family:inherit;}
+  .gate input[type=password]:focus{outline:2px solid var(--red);border-color:transparent;}
+  .remember{display:flex;align-items:center;gap:10px;justify-content:flex-start;margin:14px 2px 0;font-size:14px;color:var(--ink-dim);text-align:left;cursor:pointer;}
+  .remember input{width:20px;height:20px;accent-color:var(--red);flex:none;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:14px 20px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;}
+  .btn-red{background:var(--red);color:#fff;width:100%;margin-top:18px;}
+  .btn-red:disabled{opacity:.6;}
+  .err{color:var(--red-2);font-size:13px;margin-top:12px;min-height:18px;}
+  .small-link{display:inline-block;margin-top:22px;color:var(--ink-faint);font-size:13px;}
+
+  /* editor */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;}
+  .top-links{display:flex;gap:14px;font-size:13px;}
+  .top-links a{color:var(--ink-dim);}
+  .editor h1{font-size:24px;color:#fff;margin-bottom:6px;}
+  .editor .sub{color:var(--ink-faint);font-size:13px;margin:0 0 20px;}
+  .grid{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:start;}
+  .preview{aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line);}
+  .preview img{width:100%;height:100%;object-fit:cover;display:block;}
+  .file-btn{display:block;margin-top:12px;text-align:center;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;}
+  .hint{font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.4;}
+  .fields{display:flex;flex-direction:column;gap:14px;}
+  .fields label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);}
+  .fields .opt{text-transform:none;letter-spacing:0;font-weight:400;}
+  .fields input,.fields textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:16px;font-family:inherit;font-weight:500;letter-spacing:0;text-transform:none;resize:vertical;}
+  .fields input:focus,.fields textarea:focus{outline:2px solid var(--red);border-color:transparent;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .savebar{position:fixed;left:0;right:0;bottom:0;background:rgba(11,11,13,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));}
+  .savebar-inner{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:14px;}
+  .savebar .btn-red{width:auto;margin:0;flex:none;}
+  .status{font-size:13px;color:var(--ink-dim);line-height:1.35;}
+  .status.ok{color:#3ee06b;}
+  @media (max-width:640px){ .grid{grid-template-columns:1fr;} .photo{max-width:300px;} .row2{grid-template-columns:1fr;} }
+
+  /* install hint */
+  .install{margin-top:18px;background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:14px;font-size:13px;color:var(--ink-dim);line-height:1.5;text-align:left;}
+  .install b{color:var(--ink);}
+  .install .btn{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);padding:10px 14px;font-size:13px;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ LOGIN ============ -->
+  <section id="gate" class="gate">
+    <div class="card">
+      <img src="owner-icon-192.png" alt="" width="64" height="64" style="border-radius:16px;">
+      <h1>Owner Login</h1>
+      <p>Depew Snack Hub · Deal of the Day</p>
+      <form id="login-form" autocomplete="on">
+        <!-- hidden username helps the phone's password manager save & fill the password -->
+        <input type="text" name="username" autocomplete="username" value="owner" hidden>
+        <input type="password" id="pw" name="password" autocomplete="current-password" placeholder="Password" required>
+        <label class="remember"><input type="checkbox" id="remember" checked> Keep me signed in on this phone</label>
+        <button class="btn btn-red" id="login-btn" type="submit">Unlock</button>
+        <div class="err" id="login-err" role="alert"></div>
+      </form>
+    </div>
+    <div class="install" id="install-hint" hidden></div>
+    <a class="small-link" href="./">← Go to the store website</a>
+  </section>
+
+  <!-- ============ DEAL EDITOR ============ -->
+  <section id="editor" class="editor" hidden>
+    <div class="top">
+      <div class="brand"><img src="owner-icon-192.png" alt="">GOOD<span class="two">2</span>GO <span class="tag">OWNER</span></div>
+      <div class="top-links"><a href="./#deal" target="_blank" rel="noopener">View site</a><a href="#" id="logout">Log out</a></div>
+    </div>
+    <h1>Deal of the Day</h1>
+    <p class="sub" id="last-updated">Loading current deal…</p>
+
+    <form id="deal-form" autocomplete="off">
+      <div class="grid">
+        <div class="photo">
+          <div class="preview"><img id="preview" src="assets/deals/dirty-redbull-combo-v2.jpg" alt="Deal photo"></div>
+          <label class="file-btn">📷 Take or choose photo
+            <input type="file" id="image" accept="image/*" hidden>
+          </label>
+          <div class="hint">Photos are shrunk automatically before upload. Square photos look best.</div>
+        </div>
+        <div class="fields">
+          <label>Badge<input type="text" id="f-tag" maxlength="40" placeholder="🔥 Today's Grab"></label>
+          <label>Title<input type="text" id="f-title" maxlength="80" placeholder="Dirty Red Bull Combo"></label>
+          <label>Description<textarea id="f-desc" maxlength="300" rows="3" placeholder="What's in the deal"></textarea></label>
+          <div class="row2">
+            <label>Price<input type="text" id="f-price" maxlength="20" inputmode="decimal" placeholder="$6.99"></label>
+            <label>Regular price <span class="opt">(optional)</span><input type="text" id="f-was" maxlength="20" inputmode="decimal" placeholder="$8.49"></label>
+          </div>
+          <label>Small print<input type="text" id="f-note" maxlength="160" placeholder="Today's featured combo at the register."></label>
+        </div>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div class="savebar" id="savebar" hidden>
+  <div class="savebar-inner">
+    <button class="btn btn-red" id="save" type="submit" form="deal-form">Save &amp; Publish</button>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Same Cloudflare Worker the website uses
+  var DEAL_API = 'https://pew-deal.celyum909.workers.dev';
+  var PW_KEY = 'pew-owner-pw';
+  var api = DEAL_API.replace(/\/+$/, '');
+
+  // --- where the password is kept: this phone (remember) or just this session
+  function getPw(){
+    try{ return localStorage.getItem(PW_KEY) || sessionStorage.getItem(PW_KEY) || ''; }catch(e){ return ''; }
+  }
+  function setPw(pw, remember){
+    try{
+      localStorage.removeItem(PW_KEY); sessionStorage.removeItem(PW_KEY);
+      if(pw){ (remember ? localStorage : sessionStorage).setItem(PW_KEY, pw); }
+    }catch(e){}
+  }
+
+  var gate = document.getElementById('gate');
+  var editor = document.getElementById('editor');
+  var savebar = document.getElementById('savebar');
+
+  function showGate(msg){
+    gate.hidden = false; editor.hidden = true; savebar.hidden = true;
+    document.getElementById('login-err').textContent = msg || '';
+  }
+  function showEditor(){
+    gate.hidden = true; editor.hidden = false; savebar.hidden = false;
+    loadDeal();
+  }
+
+  function checkPw(pw){
+    return fetch(api + '/login', {method: 'POST', headers: {'X-Admin-Password': pw}}).then(function(r){ return r.status; });
+  }
+
+  // --- login
+  document.getElementById('login-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var pw = document.getElementById('pw').value;
+    var remember = document.getElementById('remember').checked;
+    var btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Checking…';
+    checkPw(pw).then(function(status){
+      if(status === 200){ setPw(pw, remember); document.getElementById('pw').value = ''; showEditor(); }
+      else if(status === 401){ showGate('Incorrect password.'); }
+      else { showGate('Login service error (' + status + '). Try again.'); }
+    }).catch(function(){ showGate("Can't reach the internet right now. Check your connection."); })
+      .finally(function(){ btn.disabled = false; btn.textContent = 'Unlock'; });
+  });
+
+  document.getElementById('logout').addEventListener('click', function(e){
+    e.preventDefault(); setPw(''); showGate('');
+  });
+
+  // --- load current deal into the form
+  var pendingImage = null;
+  function fmtTime(ms){
+    try{ return new Date(ms).toLocaleString([], {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }catch(e){ return ''; }
+  }
+  function fill(d){
+    document.getElementById('f-tag').value = d.tag || '';
+    document.getElementById('f-title').value = d.title || '';
+    document.getElementById('f-desc').value = d.desc || '';
+    document.getElementById('f-price').value = d.price || '';
+    document.getElementById('f-was').value = d.was || '';
+    document.getElementById('f-note').value = d.note || '';
+    if(d.hasImage) document.getElementById('preview').src = api + '/deal/image?v=' + (d.updated || 0);
+    document.getElementById('last-updated').textContent = d.updated ? 'Last published ' + fmtTime(d.updated) : 'Showing the deal built into the website.';
+  }
+  var DEFAULT_DEAL = {tag:"🔥 Today's Grab", title:'Dirty Red Bull Combo', desc:'Utz Butter Popcorn + a Dirty Red Bull, made fresh at the register.', price:'$6.99', was:'', note:"Today's featured combo at the register."};
+  function loadDeal(){
+    fetch(api + '/deal', {cache: 'no-store'})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ fill(d && !d.empty ? d : DEFAULT_DEAL); })
+      .catch(function(){ fill(DEFAULT_DEAL); document.getElementById('last-updated').textContent = "Couldn't load the current deal — check your connection."; });
+  }
+
+  // --- photo: shrink before upload
+  function shrink(file, maxSide){
+    return new Promise(function(resolve, reject){
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function(){
+        var s = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function(b){ b ? resolve(b) : reject(new Error('Could not prepare the photo.')); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("That file isn't a photo this phone can read.")); };
+      img.src = url;
+    });
+  }
+  var statusEl = document.getElementById('status');
+  function setStatus(t, ok){ statusEl.textContent = t; statusEl.className = 'status' + (ok ? ' ok' : ''); }
+
+  document.getElementById('image').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0]; if(!f) return;
+    setStatus('Preparing photo…');
+    shrink(f, 1400).then(function(b){
+      pendingImage = b;
+      document.getElementById('preview').src = URL.createObjectURL(b);
+      setStatus('New photo ready — tap Save & Publish.');
+    }).catch(function(err){ setStatus(err.message); });
+  });
+
+  // --- save
+  document.getElementById('deal-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var btn = document.getElementById('save');
+    var fd = new FormData();
+    ['tag','title','desc','price','was','note'].forEach(function(k){ fd.append(k, document.getElementById('f-' + k).value); });
+    if(pendingImage) fd.append('image', pendingImage, 'deal.jpg');
+    btn.disabled = true; setStatus('Publishing…');
+    fetch(api + '/deal', {method: 'POST', headers: {'X-Admin-Password': getPw()}, body: fd})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(b){ return {s: r.status, b: b}; }); })
+      .then(function(res){
+        if(res.s === 401){ setPw(''); showGate('Your password changed — please log in again.'); return; }
+        if(res.s !== 200){ setStatus(res.b.error || ('Save failed (' + res.s + ').')); return; }
+        pendingImage = null; fill(res.b.deal);
+        setStatus('Published — the new deal is live.', true);
+      })
+      .catch(function(){ setStatus("Couldn't reach the internet. Check your connection and try again."); })
+      .finally(function(){ btn.disabled = false; });
+  });
+
+  // --- start: skip the login if this phone is remembered
+  var saved = getPw();
+  if(saved){
+    showEditor();
+    checkPw(saved).then(function(s){ if(s === 401){ setPw(''); showGate('Your password changed — please log in again.'); } }).catch(function(){});
+  } else {
+    showGate('');
+  }
+
+  // --- installable app
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+  var installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var hint = document.getElementById('install-hint');
+  if(!installed){
+    hint.hidden = false;
+    hint.innerHTML = isIOS
+      ? '<b>Put this on your home screen:</b> tap <b>Share</b> at the bottom of Safari, then <b>Add to Home Screen</b>.'
+      : '<b>Put this on your home screen:</b> tap Chrome\'s <b>&#8942;</b> menu, then <b>Add to Home screen</b> or <b>Install app</b>.';
+    window.addEventListener('beforeinstallprompt', function(e){
+      e.preventDefault();
+      hint.innerHTML = '<b>Put the PEW Owner app on your home screen</b><br><button class="btn" type="button" id="install-btn">Add to Home Screen</button>';
+      document.getElementById('install-btn').addEventListener('click', function(){
+        e.prompt();
+        e.userChoice.then(function(c){ if(c.outcome === 'accepted') hint.hidden = true; });
+      });
+    });
+    window.addEventListener('appinstalled', function(){ hint.hidden = true; });
+  }
+})();
+</script>
+</body>
+</html>
