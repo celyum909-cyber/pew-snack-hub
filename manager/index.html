@@ -143,13 +143,15 @@ async function login(p){
   var r=await fetch(API+'/login',{method:'POST',headers:{'X-Admin-Password':p}});
   if(r.status===401)return {ok:false,wrong:true};
   if(!r.ok)return {ok:false,error:'Login service error ('+r.status+')'};
-  var j=await r.json();return {ok:true,role:j.role};
+  var j=await r.json();
+  if(j.role!=='manager')return {ok:false,error:"That password is for the Deal of the Day app. Use the manager password here.",notManager:true};
+  return {ok:true,role:j.role};
 }
 
 async function start(p,r){
   pw=p;role=r;
   $('gate').hidden=true;$('app').hidden=false;
-  $('role').textContent=role==='owner'?'Owner':'Staff';
+  $('role').textContent='Manager';
   try{
     var res=await Promise.all([fetch('catalog.json').then(function(x){return x.json()}),fetch(API+'/products',{cache:'no-store'}).then(function(x){return x.json()})]);
     catalog=res[0];edits=(res[1]&&res[1].edits)||{};
