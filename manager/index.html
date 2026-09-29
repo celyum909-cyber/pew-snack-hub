@@ -85,7 +85,10 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
       <div class="err" id="loginErr" role="alert"></div>
     </form>
   </div>
-  <div class="tip"><b>Tip:</b> add this to your phone. iPhone: open in Safari, tap Share, then Add to Home Screen. Android: tap the three dots, then Install app.</div>
+  <div class="tip" id="installBox">
+    <button class="btn btn-line" id="installBtn" type="button" hidden style="width:100%;margin-bottom:10px">Install this app on your phone</button>
+    <div id="installNote"><b>Tip:</b> add this to your phone. iPhone: open in Safari, tap Share, then Add to Home Screen. Android: tap the three dots, then Install app.</div>
+  </div>
 </div>
 
 <!-- LIST -->
@@ -271,6 +274,27 @@ $('loginForm').addEventListener('submit',async function(ev){
   }catch(e){$('loginErr').textContent="Can't reach the internet. Try again."}
   b.disabled=false;
 });
+
+// ---- install button (shows only when the browser says the app can be installed) ----
+(function(){
+  var btn=$('installBtn'),note=$('installNote'),deferred=null;
+  var standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(standalone){$('installBox').hidden=true;return}
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();deferred=e;btn.hidden=false;
+    note.textContent='Tap the button to put Hub Manager on your home screen.';
+  });
+  btn.addEventListener('click',function(){
+    if(!deferred)return;deferred.prompt();
+    deferred.userChoice.then(function(){deferred=null;btn.hidden=true});
+  });
+  window.addEventListener('appinstalled',function(){$('installBox').hidden=true});
+  setTimeout(function(){
+    if(!deferred&&!/iPhone|iPad|iPod/.test(navigator.userAgent)){
+      note.innerHTML="Your browser hasn't offered the install button yet. Try the three-dot menu, then <b>Install app</b>. If it isn't there, close this tab, reopen this page, and wait 10 seconds.";
+    }
+  },6000);
+})();
 
 (async function boot(){
   var saved=getSaved();
