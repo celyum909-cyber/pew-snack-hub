@@ -128,7 +128,8 @@ const gameFrame = document.querySelector('#candy-game-frame');
 const heroVideos = [
   {src:ASSETS['assets/hero.mp4'],poster:ASSETS['assets/hero-poster.jpg'],name:'Snack showcase',hasAudio:false},
   {src:ASSETS['assets/voltaris-pepsi.mp4'],poster:ASSETS['assets/voltaris-poster.jpg'],name:'Voltaris Pepsi',hasAudio:false},
-  {src:ASSETS['assets/union-rings.mp4'],poster:ASSETS['assets/union-rings-poster.jpg'],name:'Union Rings',hasAudio:true}
+  {src:ASSETS['assets/union-rings.mp4'],poster:ASSETS['assets/union-rings-poster.jpg'],name:'Union Rings',hasAudio:true},
+  {src:'videos/halloween-pepsi.mp4',poster:'videos/halloween-pepsi-poster.jpg',name:'Halloween Pepsi',hasAudio:true}
 ];
 let selectedVideo=0;
 let userPaused=reducedMotion.matches;
@@ -304,6 +305,4 @@ const DEAL_API='https://pew-deal.celyum909.workers.dev';
   }).catch(()=>{/* keep the built-in deal if the service can't be reached */});
 })();
 </script>
-<script src="pew-install.js" defer></script>
-<script src="pew-catalog.js" defer></script>
 </body></html>
