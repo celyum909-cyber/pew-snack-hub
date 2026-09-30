@@ -59,7 +59,7 @@ body.game-open{overflow:hidden}
  .product-slot:has(.product-price-badge){position:relative}.product-price-badge{position:absolute;right:4px;bottom:4px;padding:4px 7px;border-radius:8px;background:#08101ade;color:#fff;font-size:13px;font-weight:900;box-shadow:0 2px 8px #0008;pointer-events:none}
 .store-hours{display:block;width:max-content;max-width:100%;margin:-17px 0 13px 42px;padding:5px 8px;border-radius:4px;background:#050914;color:#fff;font-size:clamp(11px,2.8vw,13px);font-weight:900;letter-spacing:.25px;line-height:1.25;text-shadow:0 1px 2px #0008;white-space:nowrap}
 .owner-link{display:block;margin:0;padding:6px 0 calc(22px + env(safe-area-inset-bottom));background:#020203;color:#9a9aa3;text-align:center;font-size:13px;font-weight:700;letter-spacing:.4px;text-decoration:none}.owner-link:active{color:#fff}
-</style>
+.deal-copy.has-photo{padding-right:128px}.deal-copy.has-photo p{max-width:none}.deal-photo{position:absolute;right:14px;top:50%;width:104px;height:104px;object-fit:cover;border-radius:14px;border:2px solid #ffffff40;background:#fff;box-shadow:0 6px 14px #0008;transform:translateY(-50%) skewY(6deg)}</style>
 </head>
 <body>
   <main class="phone" aria-label="PEW Snack Hub">
@@ -292,17 +292,24 @@ const DEAL_API='https://pew-deal.celyum909.workers.dev';
   fetch(base+'/deal',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||d.empty)return;
     if(d.title)deal.name=d.title;
-    deal.price=d.price||deal.price;
+    deal.price=d.price?(/^[\d.]+$/.test(d.price)?'$'+d.price:d.price):deal.price;
     deal.summary=d.desc||(d.price?d.price:deal.summary);
     const parts=[];
     if(d.desc)parts.push(d.desc);
-    if(d.was)parts.push('Regular price: '+d.was);
+    if(d.was&&parseFloat(d.was)!==0)parts.push('Regular price: '+(/^[\d.]+$/.test(d.was)?'$':'')+d.was);
     if(d.note)parts.push(d.note);
     if(parts.length)deal.description=parts.join('\n\n');
-    if(d.hasImage){deal.image=base+'/deal/image?v='+(d.updated||0);deal.displayImage=deal.image;}
+    if(d.hasImage){deal.image=base+'/deal/image?v='+(d.updated||0);deal.displayImage=deal.image;
+      var copy=document.querySelector('#deal .deal-copy');
+      if(copy){var ph=copy.querySelector('.deal-photo');if(!ph){ph=document.createElement('img');ph.className='deal-photo';ph.alt='';copy.appendChild(ph);copy.classList.add('has-photo');}ph.src=deal.image;}
+    }
     document.querySelector('#deal-title').textContent=deal.name;
     document.querySelector('#deal-summary').textContent=deal.summary;
   }).catch(()=>{/* keep the built-in deal if the service can't be reached */});
 })();
+
 </script>
+<script src="pew-install.js"></script>
+<script src="pew-catalog.js"></script>
+<script src="pew-videos.js"></script>
 </body></html>

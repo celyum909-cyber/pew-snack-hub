@@ -68,6 +68,21 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
 .bar-in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center}.bar .btn-red{flex:1}
 .msg{max-width:640px;margin:0 auto 8px;font-size:13px;color:var(--dim);min-height:18px}.msg.ok{color:var(--ok)}.msg.bad{color:#ff7a80}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0));background:#0f3d1f;color:#b6f5c8;border:1px solid #1f7a3d;border-radius:12px;padding:12px 16px;font-size:14px;font-weight:700;z-index:99;max-width:90%}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.cat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-height:92px}
+.cat:active{background:var(--surface2)}
+.cat .ct{font-weight:900;font-size:16px;line-height:1.1}.cat .cs{color:var(--dim);font-size:12.5px}
+.cat.vid{border-color:var(--red)}.cat .ce{font-size:22px}
+.backrow{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.backrow h2{margin:0;font-size:20px}
+.vrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:9px;margin-bottom:8px}
+.vrow img{width:72px;height:52px;border-radius:9px;object-fit:cover;background:var(--surface2);flex:none}
+.vrow .meta{flex:1;min-width:0}.vrow .nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vrow .pr{color:var(--dim);font-size:12.5px;margin-top:2px}
+.vbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 12px;font-weight:800;font-size:13px;cursor:pointer}
+.vbtn.del{background:#5a1d24;border-color:#7a2a33;color:#ffb3b8}
+.vadd{background:var(--surface);border:1px dashed var(--line);border-radius:16px;padding:14px;margin:6px 0 14px}
+.vadd h3{margin:0 0 4px;font-size:16px}
+.vadd .field{margin-top:12px}
+.vprev{width:100%;max-height:200px;border-radius:12px;background:#000;margin-top:10px}
 </style>
 </head>
 <body>
@@ -132,7 +147,9 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
 var API='https://pew-deal.celyum909.workers.dev';
 var KEY='pew-mgr-pw';
 var $=function(id){return document.getElementById(id)};
-var catalog=null, edits={}, pw='', role='', current=null, newPhoto=null, resetFlag=false;
+var catalog=null, edits={}, pw='', role='', current=null, newPhoto=null, resetFlag=false, view=null, vids={items:[],hiddenBuiltin:[]}, newVid=null, newVidPoster=null;
+var CAT_EMOJI={'Refreshments':'🥤','Chips':'🥔','Snacks':'🍿','Energy Drinks':'⚡','Ice Cream':'🍦','Toys':'🧸','Chocolate Bars':'🍫','Candy':'🍬'};
+var BUILTIN=[{name:'Snack showcase',locked:true},{name:'Voltaris Pepsi'},{name:'Union Rings'},{name:'Halloween Pepsi'}];
 
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 
@@ -156,8 +173,8 @@ async function start(p,r){
   $('gate').hidden=true;$('app').hidden=false;
   $('role').textContent='Manager';
   try{
-    var res=await Promise.all([fetch('catalog.json').then(function(x){return x.json()}),fetch(API+'/products',{cache:'no-store'}).then(function(x){return x.json()})]);
-    catalog=res[0];edits=(res[1]&&res[1].edits)||{};
+    var res=await Promise.all([fetch('catalog.json').then(function(x){return x.json()}),fetch(API+'/products',{cache:'no-store'}).then(function(x){return x.json()}),fetch(API+'/videos',{cache:'no-store'}).then(function(x){return x.ok?x.json():null}).catch(function(){return null})]);
+    catalog=res[0];edits=(res[1]&&res[1].edits)||{};if(res[2])vids=res[2];vids.items=vids.items||[];vids.hiddenBuiltin=vids.hiddenBuiltin||[];
     renderList();
   }catch(e){$('list').innerHTML='';$('list').append(el('div','loading',"Couldn't load the product list. Check your internet and reload."))}
 }
@@ -167,25 +184,141 @@ function eff(p){var e=edits[p.id]||{};
     hidden:!!e.hidden,edited:!!e.updated,img:e.img?API+'/products/image/'+p.id+'?v='+e.img:p.thumb};
 }
 
+function rowFor(g,p){
+  var v=eff(p),b=el('button','row');b.type='button';
+  var im=el('img','thumb'+(v.img?' has':''));if(v.img){im.src=v.img}im.alt='';
+  var m=el('div','meta'),nm=el('div','nm');
+  if(v.name){nm.textContent=v.name}else{nm.textContent='Empty spot '+p.n;nm.classList.add('empty')}
+  if(v.hidden){nm.append(el('span','tag hid','Hidden'))}else if(v.edited){nm.append(el('span','tag ed','Edited'))}
+  m.append(nm,el('div','pr',v.name?(v.price||'No price'):'Tap to add a product'));
+  b.append(im,m,el('span','chev','›'));
+  b.addEventListener('click',function(){openEditor(g,p)});
+  return b;
+}
 function renderList(){
   var q=$('search').value.trim().toLowerCase(),list=$('list');list.innerHTML='';
-  catalog.groups.forEach(function(g){
-    var rows=g.products.filter(function(p){var v=eff(p);return !q||(v.name||'').toLowerCase().indexOf(q)>-1||(v.sub||'').toLowerCase().indexOf(q)>-1||g.title.toLowerCase().indexOf(q)>-1});
-    if(!rows.length)return;
-    list.append(el('h2','grp',g.title));
-    rows.forEach(function(p){
-      var v=eff(p),b=el('button','row');b.type='button';
-      var im=el('img','thumb'+(v.img?' has':''));if(v.img){im.src=v.img}im.alt='';
-      var m=el('div','meta'),nm=el('div','nm');
-      if(v.name){nm.textContent=v.name}else{nm.textContent='Empty spot '+p.n;nm.classList.add('empty')}
-      if(v.hidden){nm.append(el('span','tag hid','Hidden'))}else if(v.edited){nm.append(el('span','tag ed','Edited'))}
-      m.append(nm,el('div','pr',v.name?(v.price||'No price'):'Tap to add a product'));
-      b.append(im,m,el('span','chev','›'));
-      b.addEventListener('click',function(){openEditor(g,p)});
-      list.append(b);
+  if(q){ // searching: show matches from every category
+    catalog.groups.forEach(function(g){
+      var rows=g.products.filter(function(p){var v=eff(p);return (v.name||'').toLowerCase().indexOf(q)>-1||(v.sub||'').toLowerCase().indexOf(q)>-1||g.title.toLowerCase().indexOf(q)>-1});
+      if(!rows.length)return;
+      list.append(el('h2','grp',g.title));
+      rows.forEach(function(p){list.append(rowFor(g,p))});
     });
+    if(!list.children.length)list.append(el('div','loading','No products match your search.'));
+    return;
+  }
+  if(view==='videos'){renderVideos(list);return}
+  if(view!==null){ // one category open
+    var g=catalog.groups[view];
+    var br=el('div','backrow'),bk=el('button','btn-ghost','← All categories');bk.type='button';bk.style.padding='6px 0';
+    bk.addEventListener('click',function(){view=null;renderList();window.scrollTo(0,0)});
+    br.append(bk);list.append(br);
+    list.append(el('h2','grp',(CAT_EMOJI[g.title]||'')+' '+g.title));
+    g.products.forEach(function(p){list.append(rowFor(g,p))});
+    return;
+  }
+  // home: one big button per category
+  var grid=el('div','cats');
+  catalog.groups.forEach(function(g,i){
+    var filled=g.products.filter(function(p){var v=eff(p);return v.name&&!v.hidden}).length;
+    var b=el('button','cat');b.type='button';
+    b.append(el('span','ce',CAT_EMOJI[g.title]||'📦'),el('span','ct',g.title),el('span','cs',filled+' of '+g.products.length+' spots filled'));
+    b.addEventListener('click',function(){view=i;renderList();window.scrollTo(0,0)});
+    grid.append(b);
   });
-  if(!list.children.length)list.append(el('div','loading','No products match your search.'));
+  var vb=el('button','cat vid');vb.type='button';
+  var nv=vids.items.length+BUILTIN.filter(function(x){return vids.hiddenBuiltin.indexOf(x.name)<0}).length;
+  vb.append(el('span','ce','🎬'),el('span','ct','Videos'),el('span','cs',nv+' in the app · add or delete'));
+  vb.addEventListener('click',function(){view='videos';renderList();window.scrollTo(0,0)});
+  grid.append(vb);
+  list.append(grid);
+}
+
+// ---------------- Videos ----------------
+async function vpost(path,form){
+  var r=await fetch(API+path,{method:'POST',headers:{'X-Admin-Password':pw},body:form});
+  if(r.status===401){clearPw();throw new Error('Your password changed. Please log in again.')}
+  var j={};try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j.error||('Failed ('+r.status+')'));
+  if(j.videos){vids=j.videos;vids.items=vids.items||[];vids.hiddenBuiltin=vids.hiddenBuiltin||[]}
+  return j;
+}
+function renderVideos(list){
+  var br=el('div','backrow'),bk=el('button','btn-ghost','← All categories');bk.type='button';bk.style.padding='6px 0';
+  bk.addEventListener('click',function(){view=null;renderList();window.scrollTo(0,0)});
+  br.append(bk);list.append(br);
+  list.append(el('h2','grp','🎬 Videos'));
+  var note=el('p','hint','Tap the Snack Hub logo in the app to switch between these videos. Send me a video and I will compress it for you, then add it here.');note.style.margin='0 2px 12px';list.append(note);
+
+  // add form
+  var box=el('div','vadd');
+  box.append(el('h3',null,'Add a video'));
+  var pick=el('label','btn btn-line','Choose a compressed MP4 video');pick.style.display='block';pick.style.textAlign='center';pick.style.marginTop='10px';
+  var inp=document.createElement('input');inp.type='file';inp.accept='video/mp4';inp.hidden=true;pick.append(inp);box.append(pick);
+  var prev=document.createElement('video');prev.className='vprev';prev.controls=true;prev.muted=true;prev.playsInline=true;prev.hidden=true;box.append(prev);
+  var nmLab=el('label','field','Name');var nmIn=document.createElement('input');nmIn.maxLength=40;nmIn.placeholder='Halloween Pepsi';nmLab.append(nmIn);box.append(nmLab);
+  var au=el('label','check');var auIn=document.createElement('input');auIn.type='checkbox';auIn.checked=true;au.append(auIn,document.createTextNode('This video has sound (shows a mute button)'));box.append(au);
+  var msg=el('div','msg','');msg.style.margin='10px 0 0';box.append(msg);
+  var up=el('button','btn btn-red','Upload video');up.type='button';up.style.width='100%';up.style.marginTop='10px';up.disabled=true;box.append(up);
+  list.append(box);
+  newVid=null;newVidPoster=null;
+  inp.addEventListener('change',async function(){
+    var f=inp.files&&inp.files[0];if(!f)return;
+    newVid=null;newVidPoster=null;up.disabled=true;
+    if(f.size>20*1024*1024){msg.className='msg bad';msg.textContent='That file is '+(f.size/1048576).toFixed(1)+' MB. The limit is 20 MB. Send it to Claude to compress.';return}
+    if(f.type!=='video/mp4'){msg.className='msg bad';msg.textContent='It has to be an MP4 video. Send it to Claude and ask for a compressed MP4.';return}
+    msg.className='msg';msg.textContent='Reading the video...';
+    try{
+      var url=URL.createObjectURL(f);prev.src=url;prev.hidden=false;
+      await new Promise(function(res,rej){prev.onloadeddata=res;prev.onerror=function(){rej(new Error("This phone can't play that video. Ask Claude to compress it.")) };setTimeout(function(){rej(new Error('The video took too long to load.'))},15000)});
+      try{prev.currentTime=Math.min(0.5,(prev.duration||1)/2);await new Promise(function(res){prev.onseeked=res;setTimeout(res,1500)})}catch(e){}
+      var w=Math.min(720,prev.videoWidth||720),h=Math.round(w*(prev.videoHeight||405)/(prev.videoWidth||720));
+      var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(prev,0,0,w,h);
+      newVidPoster=await new Promise(function(res){c.toBlob(res,'image/jpeg',0.8)});
+      newVid=f;
+      if(!nmIn.value)nmIn.value=f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').slice(0,40);
+      msg.className='msg ok';msg.textContent=(f.size/1048576).toFixed(1)+' MB · ready to upload';up.disabled=false;
+    }catch(e){msg.className='msg bad';msg.textContent=e.message;prev.hidden=true}
+  });
+  up.addEventListener('click',async function(){
+    if(!newVid)return;up.disabled=true;msg.className='msg';msg.textContent='Uploading... keep this page open.';
+    try{
+      var f=new FormData();f.set('video',newVid,'video.mp4');if(newVidPoster)f.set('poster',newVidPoster,'poster.jpg');
+      f.set('name',nmIn.value||'New video');f.set('audio',auIn.checked?'1':'0');
+      await vpost('/videos',f);renderList();toast('Video added. It shows in the app in a moment.');
+    }catch(e){msg.className='msg bad';msg.textContent=e.message;up.disabled=false}
+  });
+
+  // uploaded videos
+  list.append(el('h2','grp','Videos you uploaded'));
+  if(!vids.items.length)list.append(el('div','loading','None yet.'));
+  vids.items.forEach(function(v){
+    var r=el('div','vrow'),im=document.createElement('img');im.src=API+'/videos/poster/'+v.id;im.alt='';
+    var m=el('div','meta');m.append(el('div','nm',v.name),el('div','pr',v.audio?'With sound':'No sound'));
+    var d=el('button','vbtn del','Delete');d.type='button';
+    d.addEventListener('click',async function(){
+      if(!confirm('Delete "'+v.name+'" from the app?'))return;
+      d.disabled=true;try{var f=new FormData();f.set('delete','1');await vpost('/videos/'+v.id,f);renderList();toast('Deleted.')}catch(e){alert(e.message);d.disabled=false}
+    });
+    r.append(im,m,d);list.append(r);
+  });
+
+  // built-in videos
+  list.append(el('h2','grp','Videos built into the app'));
+  BUILTIN.forEach(function(b){
+    var hid=vids.hiddenBuiltin.indexOf(b.name)>-1;
+    var r=el('div','vrow');var m=el('div','meta');
+    m.append(el('div','nm',b.name),el('div','pr',b.locked?'Always first - cannot be removed':(hid?'Hidden from the app':'Showing in the app')));
+    r.append(m);
+    if(!b.locked){
+      var t=el('button','vbtn',hid?'Show':'Hide');t.type='button';
+      t.addEventListener('click',async function(){
+        t.disabled=true;try{var f=new FormData();f.set('name',b.name);f.set('hidden',hid?'0':'1');await vpost('/videos/builtin',f);renderList()}catch(e){alert(e.message);t.disabled=false}
+      });
+      r.append(t);
+    }
+    list.append(r);
+  });
 }
 $('search').addEventListener('input',function(){if(catalog)renderList()});
 
