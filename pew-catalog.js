@@ -30,29 +30,27 @@
   if(document.readyState==='complete')apply();else window.addEventListener('load',apply);
 })();
 
-/* Adds extra hero videos listed in videos/videos.json to the logo-tap switcher.
-   To add a video: upload the .mp4 (+ optional poster .jpg) into the videos/ folder on GitHub,
-   then add one line to videos/videos.json. No other changes needed. */
+/* Adds extra hero videos to the logo-tap switcher, in this order:
+   1) videos listed in videos/videos.json (files uploaded to GitHub)
+   2) videos added from the Manager app (stored on the Cloudflare Worker) */
 (function(){
+  var W='https://pew-deal.celyum909.workers.dev';
+  function getJ(u){return fetch(u,{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})}
   function go(){
     if(typeof heroVideos==='undefined'||!Array.isArray(heroVideos))return;
-    fetch('videos/videos.json?v='+Date.now(),{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():null})
-      .then(function(d){
-        if(!d||!Array.isArray(d.videos))return;
-        d.videos.forEach(function(v){
-          if(!v||!v.file)return;
-          heroVideos.push({
-            src:'videos/'+v.file,
-            poster:v.poster?'videos/'+v.poster:'',
-            name:v.name||v.file,
-            hasAudio:!!v.audio
-          });
-        });
-        var logo=document.querySelector('.floating-logo,[class*="logo"] button,button.floating-logo');
-        var lb=document.querySelector('#logo-button')||logo;
-        if(lb&&heroVideos.length>1)lb.setAttribute('aria-label','Switch to '+heroVideos[1].name+' video');
-      }).catch(function(){});
+    Promise.all([getJ('videos/videos.json?v='+Date.now()),getJ(W+'/videos')]).then(function(r){
+      var a=r[0],b=r[1];
+      if(a&&Array.isArray(a.videos))a.videos.forEach(function(v){
+        if(!v||!v.file)return;
+        heroVideos.push({src:'videos/'+v.file,poster:v.poster?'videos/'+v.poster:'',name:v.name||v.file,hasAudio:!!v.audio});
+      });
+      if(b&&Array.isArray(b.list))b.list.forEach(function(v){
+        if(!v||!v.id)return;
+        heroVideos.push({src:W+'/videos/file/'+v.id+'?v='+v.updated,poster:v.hasPoster?W+'/videos/poster/'+v.id+'?v='+v.updated:'',name:v.name||'Video',hasAudio:!!v.audio});
+      });
+      var lb=document.querySelector('.floating-logo');
+      if(lb&&heroVideos.length>1)lb.setAttribute('aria-label','Switch to '+heroVideos[1].name+' video');
+    });
   }
   if(document.readyState==='complete')go();else window.addEventListener('load',go);
 })();
