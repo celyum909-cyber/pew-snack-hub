@@ -1,0 +1,5 @@
+{
+  "videos": [
+    { "name": "Energy Drink", "file": "energy-drink.mp4", "poster": "energy-drink-poster.jpg", "audio": true }
+  ]
+}

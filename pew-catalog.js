@@ -29,3 +29,30 @@
   }
   if(document.readyState==='complete')apply();else window.addEventListener('load',apply);
 })();
+
+/* Adds extra hero videos listed in videos/videos.json to the logo-tap switcher.
+   To add a video: upload the .mp4 (+ optional poster .jpg) into the videos/ folder on GitHub,
+   then add one line to videos/videos.json. No other changes needed. */
+(function(){
+  function go(){
+    if(typeof heroVideos==='undefined'||!Array.isArray(heroVideos))return;
+    fetch('videos/videos.json?v='+Date.now(),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null})
+      .then(function(d){
+        if(!d||!Array.isArray(d.videos))return;
+        d.videos.forEach(function(v){
+          if(!v||!v.file)return;
+          heroVideos.push({
+            src:'videos/'+v.file,
+            poster:v.poster?'videos/'+v.poster:'',
+            name:v.name||v.file,
+            hasAudio:!!v.audio
+          });
+        });
+        var logo=document.querySelector('.floating-logo,[class*="logo"] button,button.floating-logo');
+        var lb=document.querySelector('#logo-button')||logo;
+        if(lb&&heroVideos.length>1)lb.setAttribute('aria-label','Switch to '+heroVideos[1].name+' video');
+      }).catch(function(){});
+  }
+  if(document.readyState==='complete')go();else window.addEventListener('load',go);
+})();
