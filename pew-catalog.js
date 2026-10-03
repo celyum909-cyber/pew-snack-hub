@@ -1,6 +1,8 @@
 /* Depew Snack Hub - applies price / name / photo changes made in the Snack Hub Manager app.
    Loaded by index.html with one script tag. If anything goes wrong the original products stay as they are. */
 (function(){
+  function fixPrice(s){s=String(s==null?'':s).trim();var m=s.match(/^\$?\s*(\d*)(\.\d{1,2})?$/);if(m&&(m[1]||m[2])){var d=m[1]||'0',c=m[2]?m[2]:'';if(c.length===2)c+='0';return '$'+d+c}return s}
+
   var API='https://pew-deal.celyum909.workers.dev';
   function apply(){
     var c=window.__PEW_CONTENT__;
@@ -13,7 +15,7 @@
           var e=edits[p.id];if(!e)return;
           if(e.name)p.name=e.name;
           if(e.subtitle)p.subtitle=e.subtitle;
-          if(e.price)p.price=e.price;
+          if(e.price)p.price=fixPrice(e.price);
           if(e.description)p.description=e.description;
           if(e.img){p.image=API+'/products/image/'+p.id+'?v='+e.img;p.dialImage=undefined;}
         });
