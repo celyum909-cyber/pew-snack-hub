@@ -82,6 +82,11 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
 .chart div{flex:1;background:var(--red);border-radius:4px 4px 0 0;min-height:2px;position:relative}
 .chart div.z{background:var(--line)}
 .axis{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin:6px 4px 14px}
+
+.groups{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gbtn{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 14px;cursor:pointer;min-height:82px;justify-content:center}
+.gbtn:active{background:var(--surface2)}
+.gname{font-weight:900;font-size:15px;line-height:1.2}.gcount{color:var(--dim);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -214,25 +219,48 @@ function eff(p){var e=edits[p.id]||{};
     hidden:!!e.hidden,edited:!!e.updated,img:e.img?API+'/products/image/'+p.id+'?v='+e.img:p.thumb};
 }
 
+var openGroup=null;
+function rowFor(g,p,list){
+  var v=eff(p),b=el('button','row');b.type='button';
+  var im=el('img','thumb'+(v.img?' has':''));if(v.img){im.src=v.img}im.alt='';
+  var m=el('div','meta'),nm=el('div','nm');
+  if(v.name){nm.textContent=v.name}else{nm.textContent='Empty spot '+p.n;nm.classList.add('empty')}
+  if(v.hidden){nm.append(el('span','tag hid','Hidden'))}else if(v.edited){nm.append(el('span','tag ed','Edited'))}
+  m.append(nm,el('div','pr',v.name?(fixPrice(v.price)||'No price'):'Tap to add a product'));
+  b.append(im,m,el('span','chev','›'));
+  b.addEventListener('click',function(){openEditor(g,p)});
+  list.append(b);
+}
 function renderList(){
   var q=$('search').value.trim().toLowerCase(),list=$('list');list.innerHTML='';
-  catalog.groups.forEach(function(g){
-    var rows=g.products.filter(function(p){var v=eff(p);return !q||(v.name||'').toLowerCase().indexOf(q)>-1||(v.sub||'').toLowerCase().indexOf(q)>-1||g.title.toLowerCase().indexOf(q)>-1});
-    if(!rows.length)return;
-    list.append(el('h2','grp',g.title));
-    rows.forEach(function(p){
-      var v=eff(p),b=el('button','row');b.type='button';
-      var im=el('img','thumb'+(v.img?' has':''));if(v.img){im.src=v.img}im.alt='';
-      var m=el('div','meta'),nm=el('div','nm');
-      if(v.name){nm.textContent=v.name}else{nm.textContent='Empty spot '+p.n;nm.classList.add('empty')}
-      if(v.hidden){nm.append(el('span','tag hid','Hidden'))}else if(v.edited){nm.append(el('span','tag ed','Edited'))}
-      m.append(nm,el('div','pr',v.name?(fixPrice(v.price)||'No price'):'Tap to add a product'));
-      b.append(im,m,el('span','chev','›'));
-      b.addEventListener('click',function(){openEditor(g,p)});
-      list.append(b);
+  if(q){ // searching: look through every group at once
+    catalog.groups.forEach(function(g){
+      var rows=g.products.filter(function(p){var v=eff(p);return (v.name||'').toLowerCase().indexOf(q)>-1||(v.sub||'').toLowerCase().indexOf(q)>-1||g.title.toLowerCase().indexOf(q)>-1});
+      if(!rows.length)return;
+      list.append(el('h2','grp',g.title));
+      rows.forEach(function(p){rowFor(g,p,list)});
     });
+    if(!list.children.length)list.append(el('div','loading','No products match your search.'));
+    return;
+  }
+  if(openGroup){
+    var g=catalog.groups.filter(function(x){return x.id===openGroup||x.title===openGroup})[0];
+    if(!g){openGroup=null;return renderList()}
+    var back=el('button','btn btn-line','← All groups');back.type='button';back.style.cssText='width:100%;margin:4px 0 6px';
+    back.addEventListener('click',function(){openGroup=null;renderList();window.scrollTo(0,0)});
+    list.append(back,el('h2','grp',g.title));
+    g.products.forEach(function(p){rowFor(g,p,list)});
+    return;
+  }
+  var grid=el('div','groups');
+  catalog.groups.forEach(function(g){
+    var shown=g.products.filter(function(p){return eff(p).name}).length,ed=g.products.filter(function(p){return edits[p.id]&&edits[p.id].updated}).length;
+    var b=el('button','gbtn');b.type='button';
+    b.append(el('span','gname',g.title),el('span','gcount',shown+' products'+(ed?' · '+ed+' edited':'')));
+    b.addEventListener('click',function(){openGroup=g.id||g.title;renderList();window.scrollTo(0,0)});
+    grid.append(b);
   });
-  if(!list.children.length)list.append(el('div','loading','No products match your search.'));
+  list.append(grid);
 }
 $('search').addEventListener('input',function(){if(catalog)renderList()});
 
