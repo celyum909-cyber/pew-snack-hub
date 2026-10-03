@@ -56,3 +56,26 @@
   }
   if(document.readyState==='complete')go();else window.addEventListener('load',go);
 })();
+
+/* Anonymous usage counter: one random ID per phone, no names or personal info.
+   Sends at most one "visit" per day, "app" (opened from the home screen) once per day, "installed" once.
+   Add ?notrack=1 to the address once on a phone to stop counting that phone (e.g. the owner's own). */
+(function(){
+  var W='https://pew-deal.celyum909.workers.dev';
+  function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+  try{if(/[?&]notrack=1/.test(location.search))ls('pew-notrack','1');if(/[?&]notrack=0/.test(location.search))localStorage.removeItem('pew-notrack')}catch(e){}
+  if(ls('pew-notrack')==='1')return;
+  var id=ls('pew-did');
+  if(!id||!/^[a-z0-9]{8,24}$/.test(id)){id=(Math.random().toString(36).slice(2,12)+Date.now().toString(36)).slice(0,20);ls('pew-did',id)}
+  var ua=navigator.userAgent||'',plat=/iPhone|iPad|iPod/.test(ua)?'i':/Android/.test(ua)?'a':'o';
+  var day=new Date().toISOString().slice(0,10);
+  function send(e,once){
+    var k='pew-t-'+e+(once==='ever'?'':'-'+day);
+    if(ls(k))return;
+    try{fetch(W+'/track',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,e:e,p:plat}),keepalive:true}).then(function(r){if(r.ok)ls(k,'1')}).catch(function(){})}catch(x){}
+  }
+  send('visit');
+  var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  if(standalone)send('app');
+  window.addEventListener('appinstalled',function(){send('installed','ever')});
+})();
