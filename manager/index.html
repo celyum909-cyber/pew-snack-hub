@@ -68,6 +68,11 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
 .bar-in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center}.bar .btn-red{flex:1}
 .msg{max-width:640px;margin:0 auto 8px;font-size:13px;color:var(--dim);min-height:18px}.msg.ok{color:var(--ok)}.msg.bad{color:#ff7a80}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0));background:#0f3d1f;color:#b6f5c8;border:1px solid #1f7a3d;border-radius:12px;padding:12px 16px;font-size:14px;font-weight:700;z-index:99;max-width:90%}
+
+.tabs{display:flex;gap:8px;margin:0 0 14px}.tabs button{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:800;font-size:14px;cursor:pointer;color:var(--dim)}.tabs button.on{background:var(--red);border-color:var(--red);color:#fff}
+.vrow .thumb{width:76px;height:52px}.vbtns{display:flex;gap:6px}.vbtns button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);font-size:16px;cursor:pointer}.vbtns button:disabled{opacity:.3}
+.vprev{width:100%;max-height:300px;border-radius:14px;background:#000;display:block}
+.prog{height:8px;border-radius:6px;background:var(--surface2);overflow:hidden;margin-top:10px}.prog i{display:block;height:100%;width:0;background:var(--red)}
 </style>
 </head>
 <body>
@@ -85,7 +90,10 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
       <div class="err" id="loginErr" role="alert"></div>
     </form>
   </div>
-  <div class="tip"><b>Tip:</b> add this to your phone. iPhone: open in Safari, tap Share, then Add to Home Screen. Android: tap the three dots, then Install app.</div>
+  <div class="tip" id="installBox">
+    <button class="btn btn-line" id="installBtn" type="button" hidden style="width:100%;margin-bottom:10px">Install this app on your phone</button>
+    <div id="installNote"><b>Tip:</b> add this to your phone. iPhone: open in Safari, tap Share, then Add to Home Screen. Android: tap the three dots, then Install app.</div>
+  </div>
 </div>
 
 <!-- LIST -->
@@ -95,8 +103,17 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
     <span class="role" id="role"></span>
   </div>
   <div class="links"><a href="https://celyum909-cyber.github.io/pew-snack-hub/" target="_blank" rel="noopener">View the app</a><a href="https://celyum909-cyber.github.io/pew-snack-hub/owner.html" target="_blank" rel="noopener">Deal of the Day</a><button id="logout" type="button">Log out</button></div>
+  <div class="tabs"><button type="button" id="tabP" class="on">Products</button><button type="button" id="tabV">Videos</button></div>
+  <div id="pane-p">
   <input class="search" id="search" type="search" placeholder="Search products" aria-label="Search products">
   <div id="list"><div class="loading">Loading products...</div></div>
+  </div>
+  <div id="pane-v" hidden>
+    <p class="hint" style="margin:0 0 12px">Videos you add here show up when someone taps the Snack Hub logo, after the built-in videos. MP4 files up to 24 MB work best (about 10 to 15 seconds).</p>
+    <label class="btn btn-red" for="vfile" style="display:block;text-align:center">Add a video</label>
+    <input type="file" id="vfile" accept="video/mp4,video/quicktime,video/webm,video/*" hidden>
+    <div id="vlist" style="margin-top:14px"><div class="loading">Loading videos...</div></div>
+  </div>
 </div>
 
 <!-- EDITOR -->
@@ -123,6 +140,24 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
   </div>
 </div>
 
+<!-- VIDEO EDITOR -->
+<div class="sheet" id="vsheet" hidden>
+  <div class="wrap">
+    <button class="btn-ghost" id="vback" type="button">&larr; Back to videos</button>
+    <h1 id="vTitle">New video</h1>
+    <p class="sub" id="vSub"></p>
+    <video class="vprev" id="vprev" controls playsinline muted preload="metadata"></video>
+    <label class="field">Name<input id="vName" maxlength="40" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" id="vAudio"> This video has sound (shows a speaker button)</label>
+    <div class="prog" id="vprog" hidden><i id="vbar"></i></div>
+    <button class="btn-ghost" id="vdel" type="button" style="margin-top:14px;color:#ff9aa0" hidden>Delete this video</button>
+  </div>
+  <div class="bar">
+    <div class="msg" id="vmsg" role="status"></div>
+    <div class="bar-in"><button class="btn btn-line" id="vcancel" type="button">Cancel</button><button class="btn btn-red" id="vsave" type="button">Save</button></div>
+  </div>
+</div>
+
 <script>
 (function(){
 'use strict';
@@ -137,19 +172,22 @@ function getSaved(){try{return localStorage.getItem(KEY)||sessionStorage.getItem
 function savePw(p,keep){try{localStorage.removeItem(KEY);sessionStorage.removeItem(KEY);(keep?localStorage:sessionStorage).setItem(KEY,p)}catch(e){}}
 function clearPw(){try{localStorage.removeItem(KEY);sessionStorage.removeItem(KEY)}catch(e){}}
 
+function fixPrice(s){s=String(s==null?'':s).trim();var m=s.match(/^\$?\s*(\d*)(\.\d{1,2})?$/);if(m&&(m[1]||m[2])){var d=m[1]||'0',c=m[2]?m[2]:'';if(c.length===2)c+='0';return '$'+d+c}return s}
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
 
 async function login(p){
   var r=await fetch(API+'/login',{method:'POST',headers:{'X-Admin-Password':p}});
   if(r.status===401)return {ok:false,wrong:true};
   if(!r.ok)return {ok:false,error:'Login service error ('+r.status+')'};
-  var j=await r.json();return {ok:true,role:j.role};
+  var j=await r.json();
+  if(j.role!=='manager')return {ok:false,error:"That password is for the Deal of the Day app. Use the manager password here.",notManager:true};
+  return {ok:true,role:j.role};
 }
 
 async function start(p,r){
   pw=p;role=r;
   $('gate').hidden=true;$('app').hidden=false;
-  $('role').textContent=role==='owner'?'Owner':'Staff';
+  $('role').textContent='Manager';
   try{
     var res=await Promise.all([fetch('catalog.json').then(function(x){return x.json()}),fetch(API+'/products',{cache:'no-store'}).then(function(x){return x.json()})]);
     catalog=res[0];edits=(res[1]&&res[1].edits)||{};
@@ -174,7 +212,7 @@ function renderList(){
       var m=el('div','meta'),nm=el('div','nm');
       if(v.name){nm.textContent=v.name}else{nm.textContent='Empty spot '+p.n;nm.classList.add('empty')}
       if(v.hidden){nm.append(el('span','tag hid','Hidden'))}else if(v.edited){nm.append(el('span','tag ed','Edited'))}
-      m.append(nm,el('div','pr',v.name?(v.price||'No price'):'Tap to add a product'));
+      m.append(nm,el('div','pr',v.name?(fixPrice(v.price)||'No price'):'Tap to add a product'));
       b.append(im,m,el('span','chev','›'));
       b.addEventListener('click',function(){openEditor(g,p)});
       list.append(b);
@@ -192,7 +230,7 @@ function openEditor(g,p){
   $('shTitle').textContent=v.name||('Empty spot '+p.n);
   $('shSub').textContent=g.title+' · spot '+p.n+(role?'':'');
   var ph=$('photo');if(v.img){ph.src=v.img;ph.className='photo has'}else{ph.removeAttribute('src');ph.className='photo'}
-  $('fName').value=v.name||'';$('fSub').value=v.sub||'';$('fPrice').value=(v.price&&v.price!=='Price available in store')?v.price:'';
+  $('fName').value=v.name||'';$('fSub').value=v.sub||'';$('fPrice').value=(v.price&&v.price!=='Price available in store')?fixPrice(v.price):'';
   $('fDesc').value=v.desc||'';$('fHide').checked=v.hidden;
   $('file').value='';$('save').disabled=false;
   $('sheet').hidden=false;$('sheet').scrollTop=0;
@@ -240,7 +278,7 @@ $('save').addEventListener('click',async function(){
   btn.disabled=true;setMsg('Saving...');
   try{
     var f=new FormData();
-    f.set('name',name);f.set('subtitle',$('fSub').value);f.set('price',$('fPrice').value);f.set('description',$('fDesc').value);
+    f.set('name',name);f.set('subtitle',$('fSub').value);f.set('price',fixPrice($('fPrice').value));f.set('description',$('fDesc').value);
     f.set('hidden',$('fHide').checked?'1':'0');
     if(newPhoto)f.set('image',newPhoto,'photo.jpg');
     var j=await post(id,f);
@@ -257,6 +295,104 @@ $('reset').addEventListener('click',async function(){
   catch(e){setMsg(e.message,'bad')}
 });
 
+
+// ---------------- VIDEOS ----------------
+var vids=[],vLoaded=false,vCur=null,vNewFile=null,vNewPoster=null,vBusy=false;
+function showTab(t){$('tabP').className=t==='p'?'on':'';$('tabV').className=t==='v'?'on':'';$('pane-p').hidden=t!=='p';$('pane-v').hidden=t!=='v';if(t==='v'&&!vLoaded)loadVideos()}
+$('tabP').addEventListener('click',function(){showTab('p')});$('tabV').addEventListener('click',function(){showTab('v')});
+
+async function loadVideos(){
+  try{var r=await fetch(API+'/videos',{cache:'no-store'});var j=await r.json();vids=j.list||[];vLoaded=true;renderVideos()}
+  catch(e){$('vlist').innerHTML='';$('vlist').append(el('div','loading',"Couldn't load videos. Check your internet."))}
+}
+function vPoster(v){return v.hasPoster?API+'/videos/poster/'+v.id+'?v='+v.updated:null}
+function vFile(v){return API+'/videos/file/'+v.id+'?v='+v.updated}
+function renderVideos(){
+  var l=$('vlist');l.innerHTML='';
+  if(!vids.length){l.append(el('div','loading','No videos added here yet. Tap "Add a video".'));return}
+  vids.forEach(function(v,i){
+    var b=el('div','row vrow');
+    var im=el('img','thumb'+(vPoster(v)?' has':''));if(vPoster(v))im.src=vPoster(v);im.alt='';
+    var m=el('div','meta'),nm=el('div','nm',v.name);m.append(nm,el('div','pr',(i+1)+' of '+vids.length+(v.audio?' · with sound':' · no sound')));
+    var bt=el('div','vbtns'),up=el('button',null,'↑'),dn=el('button',null,'↓');up.type=dn.type='button';up.disabled=i===0;dn.disabled=i===vids.length-1;
+    up.setAttribute('aria-label','Move up');dn.setAttribute('aria-label','Move down');
+    up.addEventListener('click',function(e){e.stopPropagation();moveVid(i,-1)});dn.addEventListener('click',function(e){e.stopPropagation();moveVid(i,1)});
+    bt.append(up,dn);b.append(im,m,bt);
+    b.addEventListener('click',function(){openVideo(v)});
+    l.append(b);
+  });
+}
+async function vpost(path,form){
+  var r=await fetch(API+path,{method:'POST',headers:{'X-Admin-Password':pw},body:form});
+  if(r.status===401){clearPw();throw new Error('Your password changed. Please log in again.')}
+  var j={};try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j.error||('Save failed ('+r.status+')'));
+  return j;
+}
+async function moveVid(i,d){
+  var j=i+d;if(j<0||j>=vids.length)return;
+  var a=vids.slice();var t=a[i];a[i]=a[j];a[j]=t;vids=a;renderVideos();
+  try{var f=new FormData();f.set('ids',vids.map(function(v){return v.id}).join(','));var res=await vpost('/videos/order',f);vids=res.list||vids;renderVideos()}
+  catch(e){toast(e.message);loadVideos()}
+}
+function vMsg(t,c){var m=$('vmsg');m.textContent=t||'';m.className='msg'+(c?' '+c:'')}
+function openVideo(v){
+  vCur=v;vNewFile=null;vNewPoster=null;vMsg('');$('vprog').hidden=true;$('vbar').style.width='0';$('vsave').disabled=false;
+  var p=$('vprev');p.removeAttribute('src');
+  if(v){$('vTitle').textContent=v.name;$('vSub').textContent='Tap play to preview.';p.poster=vPoster(v)||'';p.src=vFile(v);$('vName').value=v.name;$('vAudio').checked=!!v.audio;$('vdel').hidden=false}
+  $('vsheet').hidden=false;$('vsheet').scrollTop=0;
+}
+function closeVideo(){var p=$('vprev');p.pause();p.removeAttribute('src');p.load();$('vsheet').hidden=true;vCur=null;vNewFile=null}
+$('vback').addEventListener('click',closeVideo);$('vcancel').addEventListener('click',closeVideo);
+
+// grab a still picture from the video (about 1 second in) to use as the poster
+function makePoster(file){
+  return new Promise(function(resolve){
+    var url=URL.createObjectURL(file),v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=url;
+    var done=false;function fin(b){if(done)return;done=true;URL.revokeObjectURL(url);resolve(b)}
+    setTimeout(function(){fin(null)},8000);
+    v.addEventListener('error',function(){fin(null)});
+    v.addEventListener('loadeddata',function(){try{v.currentTime=Math.min(1,(v.duration||2)/2)}catch(e){fin(null)}});
+    v.addEventListener('seeked',function(){
+      try{var w=v.videoWidth,h=v.videoHeight;if(!w||!h)return fin(null);var sc=Math.min(1,960/w),c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);
+        c.getContext('2d').drawImage(v,0,0,c.width,c.height);c.toBlob(function(b){fin(b)},'image/jpeg',0.8)}catch(e){fin(null)}
+    });
+  });
+}
+$('vfile').addEventListener('change',async function(){
+  var f=this.files&&this.files[0];this.value='';if(!f)return;
+  if(f.size>24*1024*1024){toast('That video is '+(f.size/1048576).toFixed(1)+' MB. The limit is 24 MB. Shrink it first.');return}
+  openVideo(null);vCur=null;vNewFile=f;
+  $('vTitle').textContent='New video';$('vSub').textContent=f.name+' · '+(f.size/1048576).toFixed(1)+' MB';
+  $('vName').value=f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').slice(0,40);$('vAudio').checked=true;$('vdel').hidden=true;
+  var p=$('vprev');p.src=URL.createObjectURL(f);
+  vMsg('Preparing picture...');vNewPoster=await makePoster(f);vMsg(vNewPoster?'Ready. Tap Save to upload.':'Ready (no picture could be made). Tap Save to upload.','ok');
+});
+$('vsave').addEventListener('click',function(){
+  if(vBusy)return;var btn=this,name=$('vName').value.trim();
+  if(!name){vMsg('Give the video a name.','bad');return}
+  btn.disabled=true;vBusy=true;vMsg(vNewFile?'Uploading... keep this open.':'Saving...');
+  var f=new FormData();f.set('name',name);f.set('audio',$('vAudio').checked?'1':'0');
+  var path;
+  if(vNewFile){f.set('video',vNewFile,vNewFile.name);if(vNewPoster)f.set('poster',vNewPoster,'poster.jpg');path='/videos'}
+  else path='/videos/'+vCur.id;
+  var xhr=new XMLHttpRequest();xhr.open('POST',API+path);xhr.setRequestHeader('X-Admin-Password',pw);
+  if(vNewFile){$('vprog').hidden=false;xhr.upload.onprogress=function(e){if(e.lengthComputable)$('vbar').style.width=Math.round(e.loaded/e.total*100)+'%'}}
+  xhr.onload=function(){
+    vBusy=false;var j={};try{j=JSON.parse(xhr.responseText)}catch(e){}
+    if(xhr.status===401){clearPw();vMsg('Your password changed. Please log in again.','bad');setTimeout(function(){location.reload()},1500);return}
+    if(xhr.status>=200&&xhr.status<300&&j.ok){vids=j.list||vids;renderVideos();closeVideo();toast('Saved. It shows in the app in a moment.')}
+    else{vMsg(j.error||('Upload failed ('+xhr.status+')'),'bad');btn.disabled=false}
+  };
+  xhr.onerror=function(){vBusy=false;vMsg("Couldn't upload. Check your internet and try again.",'bad');btn.disabled=false};
+  xhr.send(f);
+});
+$('vdel').addEventListener('click',async function(){
+  if(!vCur)return;if(!confirm('Delete "'+vCur.name+'" from the app? This cannot be undone.'))return;
+  try{var f=new FormData();f.set('delete','1');var j=await vpost('/videos/'+vCur.id,f);vids=j.list||[];renderVideos();closeVideo();toast('Video deleted.')}
+  catch(e){vMsg(e.message,'bad')}
+});
+
 $('logout').addEventListener('click',function(){clearPw();location.reload()});
 
 $('loginForm').addEventListener('submit',async function(ev){
@@ -269,6 +405,27 @@ $('loginForm').addEventListener('submit',async function(ev){
   }catch(e){$('loginErr').textContent="Can't reach the internet. Try again."}
   b.disabled=false;
 });
+
+// ---- install button (shows only when the browser says the app can be installed) ----
+(function(){
+  var btn=$('installBtn'),note=$('installNote'),deferred=null;
+  var standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(standalone){$('installBox').hidden=true;return}
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();deferred=e;btn.hidden=false;
+    note.textContent='Tap the button to put Hub Manager on your home screen.';
+  });
+  btn.addEventListener('click',function(){
+    if(!deferred)return;deferred.prompt();
+    deferred.userChoice.then(function(){deferred=null;btn.hidden=true});
+  });
+  window.addEventListener('appinstalled',function(){$('installBox').hidden=true});
+  setTimeout(function(){
+    if(!deferred&&!/iPhone|iPad|iPod/.test(navigator.userAgent)){
+      note.innerHTML="Your browser hasn't offered the install button yet. Try the three-dot menu, then <b>Install app</b>. If it isn't there, close this tab, reopen this page, and wait 10 seconds.";
+    }
+  },6000);
+})();
 
 (async function boot(){
   var saved=getSaved();
