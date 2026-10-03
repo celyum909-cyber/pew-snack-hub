@@ -59,9 +59,23 @@ body.game-open{overflow:hidden}
  .product-slot:has(.product-price-badge){position:relative}.product-price-badge{position:absolute;right:4px;bottom:4px;padding:4px 7px;border-radius:8px;background:#08101ade;color:#fff;font-size:13px;font-weight:900;box-shadow:0 2px 8px #0008;pointer-events:none}
 .store-hours{display:block;width:max-content;max-width:100%;margin:-17px 0 13px 42px;padding:5px 8px;border-radius:4px;background:#050914;color:#fff;font-size:clamp(11px,2.8vw,13px);font-weight:900;letter-spacing:.25px;line-height:1.25;text-shadow:0 1px 2px #0008;white-space:nowrap}
 .owner-link{display:block;margin:0;padding:6px 0 calc(22px + env(safe-area-inset-bottom));background:#020203;color:#9a9aa3;text-align:center;font-size:13px;font-weight:700;letter-spacing:.4px;text-decoration:none}.owner-link:active{color:#fff}
+
+/* Deal of the Day photo in the black area + Instagram link */
+.deal-copy.has-thumb{padding-right:calc(36% + 26px)}
+.deal-thumb{position:absolute;right:18px;top:50%;width:36%;max-width:170px;aspect-ratio:1/1;transform:translateY(-42%);object-fit:cover;border-radius:12px;border:2px solid #ffd21a;background:#fff;box-shadow:0 10px 22px #000a,0 0 18px #ffd21a33;pointer-events:none}
+.ig-row{display:flex;justify-content:flex-end;padding:0 14px;margin:34px 0 -22px;transform:skewY(-6deg);position:relative;z-index:2}
+.ig-link{display:inline-flex;align-items:center;gap:9px;padding:10px 14px 10px 12px;border-radius:6px;background:linear-gradient(100deg,#feda75 0%,#fa7e1e 28%,#d62976 58%,#962fbf 82%,#4f5bd5 100%);color:#fff;text-decoration:none;font-weight:900;font-size:14px;letter-spacing:.3px;text-transform:uppercase;box-shadow:0 10px 20px #0009;text-shadow:0 1px 2px #0007}
+.ig-link b{font-weight:900;text-transform:none}
+.ig-link svg{width:22px;height:22px;flex:none;fill:none;stroke:#fff;stroke-width:2.2}
+.ig-link svg .dot{fill:#fff;stroke:none}
+.ig-link .ig-arrow{font-size:17px;color:#fff}
+.ig-link:active{filter:brightness(1.1)}
 </style>
 </head>
 <body>
+<script>
+window.__pewSetDealThumb=function(src){var img=document.getElementById('deal-thumb');if(!img)return;var box=img.parentNode;if(!src){img.hidden=true;box.classList.remove('has-thumb');return;}img.onload=function(){img.hidden=false;box.classList.add('has-thumb')};img.onerror=function(){img.hidden=true;box.classList.remove('has-thumb')};img.src=src;};
+</script>
   <main class="phone" aria-label="PEW Snack Hub">
     <header class="hero">
       <video id="hero-video" autoplay muted loop playsinline preload="auto" aria-label="Energy drink showcase"><source type="video/mp4"></video>
@@ -78,10 +92,11 @@ body.game-open{overflow:hidden}
         </div>
       </div>
       <button class="deal" id="deal" aria-haspopup="dialog">
-        <div class="deal-copy"><span class="store-hours">WEEKDAYS 7 AM–12 AM · SUNDAY 8 AM–12 AM</span><span class="eyebrow">DEAL OF THE DAY</span><h1 id="deal-title"></h1><p id="deal-summary"></p><span class="detail-hint">See the full deal <span aria-hidden="true">↗</span></span></div>
+        <div class="deal-copy"><img class="deal-thumb" id="deal-thumb" alt="" hidden><span class="store-hours">WEEKDAYS 7 AM–12 AM · SUNDAY 8 AM–12 AM</span><span class="eyebrow">DEAL OF THE DAY</span><h1 id="deal-title"></h1><p id="deal-summary"></p><span class="detail-hint">See the full deal <span aria-hidden="true">↗</span></span></div>
       </button>
     </section>
     <div id="carousels"></div>
+    <div class="ig-row"><a class="ig-link" href="https://www.instagram.com/snackhub716/" target="_blank" rel="noopener noreferrer" aria-label="Follow Depew Snack Hub on Instagram, @snackhub716"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.1" class="dot"/></svg><span>Follow us <b>@snackhub716</b></span><span class="ig-arrow" aria-hidden="true">↗</span></a></div>
     <section class="game-feature" aria-labelledby="candy-game-title">
       <button class="game-launch" id="candy-game-launch" type="button">
         <span class="game-kicker">SNACK BREAK</span>
@@ -273,7 +288,7 @@ function createChipDial(products){
 }
 try{
   const content=window.__PEW_CONTENT__;
-  const deal=content.deal;document.querySelector('#deal-title').textContent=deal.name;document.querySelector('#deal-summary').textContent=deal.summary;
+  const deal=content.deal;window.__pewSetDealThumb&&window.__pewSetDealThumb(deal.displayImage||deal.image);document.querySelector('#deal-title').textContent=deal.name;document.querySelector('#deal-summary').textContent=deal.summary;
   document.querySelector('#deal').addEventListener('click',event=>openDetails(deal,'DEAL OF THE DAY',event.currentTarget));
   const chips=content.carousels.find(collection=>collection.title==='Chips');if(chips)createChipDial(chips.products.filter(product=>product.image));
   content.carousels.forEach(collection=>document.querySelector('#carousels').append(createCarousel(collection)));
@@ -298,7 +313,7 @@ const DEAL_API='https://pew-deal.celyum909.workers.dev';
     if(d.was)parts.push('Regular price: '+d.was);
     if(d.note)parts.push(d.note);
     if(parts.length)deal.description=parts.join('\n\n');
-    if(d.hasImage){deal.image=base+'/deal/image?v='+(d.updated||0);deal.displayImage=deal.image;}
+    if(d.hasImage){deal.image=base+'/deal/image?v='+(d.updated||0);deal.displayImage=deal.image;window.__pewSetDealThumb&&window.__pewSetDealThumb(deal.image);}
     document.querySelector('#deal-title').textContent=deal.name;
     document.querySelector('#deal-summary').textContent=deal.summary;
   }).catch(()=>{/* keep the built-in deal if the service can't be reached */});
