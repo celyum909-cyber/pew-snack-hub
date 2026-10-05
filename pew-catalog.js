@@ -79,3 +79,6 @@
   if(standalone)send('app');
   window.addEventListener('appinstalled',function(){send('installed','ever')});
 })();
+
+/* Pickup ordering pilot: pew-orders.js (delete this block to remove ordering from the app) */
+(function(){try{var s=document.createElement('script');s.src='pew-orders.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();

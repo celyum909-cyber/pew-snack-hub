@@ -76,6 +76,18 @@
   .install{margin-top:18px;background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:14px;font-size:13px;color:var(--ink-dim);line-height:1.5;text-align:left;}
   .install b{color:var(--ink);}
   .install .btn{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);padding:10px 14px;font-size:13px;margin-top:10px;}
+  /* tabs + orders */
+  .tabs{display:flex;gap:8px;margin:0 0 18px}
+  .tabs button{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-dim);font-weight:800;font-size:15px;font-family:inherit;cursor:pointer}
+  .tabs button.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ord{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px;margin:0 0 12px}
+  .ord-new{border-color:var(--red);box-shadow:0 0 0 2px rgba(226,38,44,.25)}.ord-ready{border-color:#2fb86a}.ord-done,.ord-cancelled{opacity:.6}
+  .ord-h{display:flex;justify-content:space-between;gap:8px;font-size:17px}.ord-st{font-size:12px;font-weight:900;letter-spacing:.06em}
+  .ord-meta{font-size:12px;color:var(--ink-faint);margin:2px 0 6px}.ord-items{margin:6px 0;padding-left:18px;font-size:15px;line-height:1.5}
+  .ord-total{font-weight:800;font-size:14px}.ord-note{margin-top:6px;font-size:13px;font-style:italic;color:var(--ink-dim)}
+  .ord-act{display:flex;gap:8px;margin-top:12px}.ord-act .btn{flex:1;width:auto;margin:0;padding:12px}.btn-line{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+  .ord-empty{color:var(--ink-dim);font-size:14px;line-height:1.5;padding:18px 4px}
+  .ord-h2{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:16px 0 8px}
 </style>
 </head>
 <body>
@@ -86,7 +98,7 @@
     <div class="card">
       <img src="owner-icon-192.png" alt="" width="64" height="64" style="border-radius:16px;">
       <h1>Owner Login</h1>
-      <p>Depew Snack Hub · Deal of the Day</p>
+      <p>Depew Snack Hub · Deal of the Day and pickup orders</p>
       <form id="login-form" autocomplete="on">
         <!-- hidden username helps the phone's password manager save & fill the password -->
         <input type="text" name="username" autocomplete="username" value="owner" hidden>
@@ -103,9 +115,17 @@
   <!-- ============ DEAL EDITOR ============ -->
   <section id="editor" class="editor" hidden>
     <div class="top">
-      <div class="brand"><img src="owner-icon-192.png" alt="">GOOD<span class="two">2</span>GO <span class="tag">OWNER</span></div>
+      <div class="brand"><img src="owner-icon-192.png" alt="">PEW <span class="two">SNACK HUB</span> <span class="tag">OWNER</span></div>
       <div class="top-links"><a href="./#deal" target="_blank" rel="noopener">View site</a><a href="#" id="logout">Log out</a></div>
     </div>
+    <div class="tabs"><button type="button" id="tab-deal" class="on">Deal of the Day</button><button type="button" id="tab-orders">Orders</button></div>
+    <div id="pane-orders" hidden>
+      <h1>Pickup Orders</h1>
+      <p class="sub">Pilot: customers pay at the counter. Tap <b>Ready for pickup</b> when it is bagged (they see it on their phone), then <b>Picked up</b> after they pay. This list refreshes by itself.</p>
+      <div id="orders-body"><div class="ord-empty">Loading orders…</div></div>
+      <button class="btn btn-red" id="orders-refresh" type="button" style="background:var(--surface-2);border:1px solid var(--line)">Refresh</button>
+    </div>
+    <div id="pane-deal">
     <h1>Deal of the Day</h1>
     <p class="sub" id="last-updated">Loading current deal…</p>
 
@@ -130,6 +150,7 @@
         </div>
       </div>
     </form>
+    </div>
   </section>
 </div>
 
@@ -167,8 +188,8 @@
     document.getElementById('login-err').textContent = msg || '';
   }
   function showEditor(){
-    gate.hidden = true; editor.hidden = false; savebar.hidden = false;
-    loadDeal();
+    gate.hidden = true; editor.hidden = false; savebar.hidden = tab !== 'deal';
+    loadDeal(); startWatch();
   }
 
   function checkPw(pw){
@@ -265,6 +286,64 @@
       .catch(function(){ setStatus("Couldn't reach the internet. Check your connection and try again."); })
       .finally(function(){ btn.disabled = false; });
   });
+
+
+  // ---------------- tabs + pickup orders ----------------
+  var tab = 'deal', ordTimer = null, seenNew = null;
+  function $(id){ return document.getElementById(id); }
+  function mk(t, c, x){ var e = document.createElement(t); if(c) e.className = c; if(x != null) e.textContent = x; return e; }
+  function showTab(t){
+    tab = t;
+    $('tab-deal').className = t === 'deal' ? 'on' : ''; $('tab-orders').className = t === 'orders' ? 'on' : '';
+    $('pane-deal').hidden = t !== 'deal'; $('pane-orders').hidden = t !== 'orders';
+    savebar.hidden = (t !== 'deal') || editor.hidden;
+    if(t === 'orders') loadOrders();
+  }
+  $('tab-deal').addEventListener('click', function(){ showTab('deal'); });
+  $('tab-orders').addEventListener('click', function(){ showTab('orders'); });
+  $('orders-refresh').addEventListener('click', function(){ loadOrders(); });
+  function when(ts){ var m = Math.max(0, Math.round((Date.now() - ts) / 60000)); if(m < 1) return 'just now'; if(m < 60) return m + ' min ago'; var h = Math.round(m / 60); return h < 24 ? h + ' hr ago' : new Date(ts).toLocaleDateString(); }
+  function beep(){ try{ var C = window.AudioContext || window.webkitAudioContext, x = new C(), o = x.createOscillator(), g = x.createGain(); o.connect(g); g.connect(x.destination); o.frequency.value = 880; g.gain.value = .08; o.start(); setTimeout(function(){ o.stop(); x.close(); }, 250); }catch(e){} }
+  function setOrder(id, status, btn){
+    btn.disabled = true;
+    fetch(api + '/orders/' + id, {method: 'POST', headers: {'X-Admin-Password': getPw(), 'Content-Type': 'application/json'}, body: JSON.stringify({status: status})})
+      .then(function(r){ if(r.status === 401){ setPw(''); showGate('Your password changed — please log in again.'); return; } if(!r.ok){ btn.disabled = false; return; } loadOrders(true); })
+      .catch(function(){ btn.disabled = false; });
+  }
+  var LABEL = {new: 'NEW', ready: 'READY', done: 'Picked up', cancelled: 'Cancelled'};
+  function card(o){
+    var c = mk('div', 'ord ord-' + o.status), h = mk('div', 'ord-h');
+    h.append(mk('b', null, '#' + o.num + ' · ' + o.name), mk('span', 'ord-st', LABEL[o.status] || o.status)); c.append(h);
+    c.append(mk('div', 'ord-meta', when(o.created) + (o.phone ? ' · ' + o.phone : '')));
+    var ul = mk('ul', 'ord-items'); o.items.forEach(function(i){ ul.append(mk('li', null, i.q + ' × ' + i.n + (i.c != null ? ' ($' + (i.c * i.q / 100).toFixed(2) + ')' : ''))); }); c.append(ul);
+    c.append(mk('div', 'ord-total', 'Total at the counter: ' + (o.cents ? '$' + (o.cents / 100).toFixed(2) : '') + (o.unpriced ? (o.cents ? ' + unpriced items' : 'check prices') : '')));
+    if(o.note) c.append(mk('div', 'ord-note', 'Note: ' + o.note));
+    var a = mk('div', 'ord-act');
+    function b(t, st, cls){ var x = mk('button', 'btn ' + cls, t); x.type = 'button'; x.addEventListener('click', function(){ setOrder(o.id, st, x); }); a.append(x); }
+    if(o.status === 'new'){ b('Ready for pickup', 'ready', 'btn-red'); b('Cancel', 'cancelled', 'btn-line'); }
+    else if(o.status === 'ready'){ b('Picked up', 'done', 'btn-red'); b('Back to new', 'new', 'btn-line'); }
+    c.append(a); return c;
+  }
+  function loadOrders(quiet){
+    var box = $('orders-body');
+    return fetch(api + '/orders', {headers: {'X-Admin-Password': getPw()}, cache: 'no-store'})
+      .then(function(r){ if(r.status === 401){ setPw(''); showGate('Your password changed — please log in again.'); return null; } return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || 'Could not load orders'); return j; }); })
+      .then(function(j){
+        if(!j) return;
+        var list = j.orders || [], news = list.filter(function(o){ return o.status === 'new'; }).length;
+        $('tab-orders').textContent = news ? 'Orders (' + news + ')' : 'Orders';
+        if(seenNew !== null && news > seenNew) beep(); seenNew = news;
+        if(tab !== 'orders') return;
+        box.textContent = '';
+        if(!list.length){ box.append(mk('div', 'ord-empty', 'No orders yet. When a customer orders from the app it shows up here.')); return; }
+        var open = list.filter(function(o){ return o.status === 'new' || o.status === 'ready'; }), old = list.filter(function(o){ return o.status === 'done' || o.status === 'cancelled'; });
+        box.append(mk('div', 'ord-h2', open.length ? 'Open orders' : 'No open orders right now'));
+        open.slice().reverse().forEach(function(o){ box.append(card(o)); });
+        if(old.length){ box.append(mk('div', 'ord-h2', 'Finished (last 3 days)')); old.slice(0, 15).forEach(function(o){ box.append(card(o)); }); }
+      })
+      .catch(function(e){ if(!quiet){ box.textContent = ''; box.append(mk('div', 'ord-empty', (e && e.message) || "Couldn't load orders. Check your connection.")); } });
+  }
+  function startWatch(){ if(ordTimer) return; ordTimer = setInterval(function(){ if(!document.hidden) loadOrders(true); }, 15000); loadOrders(true); }
 
   // --- start: skip the login if this phone is remembered
   var saved = getPw();
