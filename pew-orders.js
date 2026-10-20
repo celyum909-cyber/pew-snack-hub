@@ -62,6 +62,8 @@
       chip.hidden=false;chip.className=active.status==='ready'?'ready':'';chip.id='po-chip';
       chip.textContent='';var l2=el('span','');l2.append(document.createTextNode('Order #'+active.num+' · '+STATUS[active.status][0]));l2.append(el('small','',STATUS[active.status][1]));chip.append(l2,el('span','','›'));
     }else chip.hidden=true;
+    // leave room under the page so the bottom links (Store Owner Login, Add to your phone) can scroll above the bars
+    requestAnimationFrame(function(){var h=(bar.hidden&&chip.hidden)?0:dock.offsetHeight+16;document.body.style.paddingBottom=h?h+'px':''});
   }
   function addItem(it){
     var f=cart.filter(function(x){return x.n===it.n&&x.p===it.p})[0];
