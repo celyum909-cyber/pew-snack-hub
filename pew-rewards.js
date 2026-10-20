@@ -2,18 +2,31 @@
    1 punch per purchase of $10 or more. 10 punches = a free bag of chips.
    Staff make a one-time QR code in the owner app (owner.html → Punch). The customer scans it with the phone
    camera (opens this site with ?punch=CODE) or with "Scan code" inside the app, and one hole is punched.
-   The card is saved on the customer's phone, in that browser (localStorage). Clearing browser data resets it.
+   The card is saved on the Cloudflare Worker under the customer's phone number, so it follows them to any phone,
+   browser or the installed app. Punches saved on a phone before this (localStorage "pew-rewards") are carried over once.
    Loaded by pew-catalog.js. To remove the feature, delete the "pew-rewards.js" block at the bottom of pew-catalog.js. */
 (function(){
   var W = 'https://pew-deal.celyum909.workers.dev';
   var R = { punches: 10, minSale: 10, reward: 'free bag of chips', store: 'Depew Snack Hub' };
-  var KEY = 'pew-rewards';
+  var KEY = 'pew-rewards';            // old on-phone card (before phone numbers); only read to carry punches over
+  var PHONE_KEY = 'pew-rewards-phone', CACHE_KEY = 'pew-rewards-card';
   var JSQR = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; // only loaded if the phone has no built-in QR reader
 
-  function get(){ try{ return JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(e){ return null; } }
-  var rw = get() || {}; if(typeof rw !== 'object') rw = {};
-  rw.punches = rw.punches | 0; rw.claimed = rw.claimed | 0; if(!Array.isArray(rw.log)) rw.log = [];
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(rw)); }catch(e){} }
+  function getJ(k){ try{ var v = JSON.parse(localStorage.getItem(k) || 'null'); return v && typeof v === 'object' ? v : null; }catch(e){ return null; } }
+  function setLS(k, v){ try{ if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); }catch(e){} }
+  var phone = (function(){ try{ return localStorage.getItem(PHONE_KEY) || ''; }catch(e){ return ''; } })();
+  var legacy = getJ(KEY) || {};
+  function legacyLeft(){ return legacy.carried ? 0 : Math.max(0, Math.min(R.punches, (legacy.punches | 0) - (legacy.claimed | 0) * R.punches)); }
+  function norm(c){ c = c || {}; return {punches: c.punches | 0, claimed: c.claimed | 0, log: Array.isArray(c.log) ? c.log : [], last4: c.last4 || ''}; }
+  // what the card shows: the server card (cached on this phone for a fast first paint), or old on-phone punches before a number is added
+  var rw = phone ? norm(getJ(CACHE_KEY)) : norm({punches: legacyLeft()});
+  function useCard(c){ rw = norm(c); setLS(CACHE_KEY, rw); }
+  function api(path, body){
+    return fetch(W + path, body ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : {cache: 'no-store'})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return {ok: r.ok, j: j}; }); });
+  }
+  function digits(v){ var d = String(v || '').replace(/\D/g, ''); if(d.length === 11 && d[0] === '1') d = d.slice(1); return /^[2-9]\d{9}$/.test(d) ? d : ''; }
+  var pendingCode = null;
   function onCard(){ return Math.max(0, rw.punches - rw.claimed * R.punches); }
   function shown(){ return Math.min(R.punches, onCard()); }
   var fresh = -1, armT;
@@ -89,6 +102,9 @@
   '.rw-cam video{width:100%;height:100%;object-fit:cover;display:block}'+
   '.rw-cam::after{content:"";position:absolute;inset:18%;border:3px solid #ffd43b;border-radius:16px;box-shadow:0 0 0 999px #0006}'+
   '.rw-cam span{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:13px;font-weight:800;color:#fff;z-index:1;text-shadow:0 1px 3px #000}'+
+  '.rw-who{text-align:center;margin:14px 0 0!important;font-size:13px!important}.rw-link{background:none;border:0;padding:0;color:#ffe340;font:inherit;font-weight:800;text-decoration:underline}'+
+  '.rw-phone{margin-top:18px;padding:16px;border-radius:16px;background:var(--panel);border:1px solid #ffd43b88}.rw-phone h4{margin:0 0 6px;font-size:18px;font-weight:950}'+
+  '.rw-phone .rw-row input{letter-spacing:.04em;text-transform:none}'+
   '.rw-hist{list-style:none;padding:0;margin:0}.rw-hist li{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}';
   document.head.appendChild(css);
 
@@ -104,7 +120,7 @@
     strip.className = full ? 'full' : '';
     strip.innerHTML = '<button type="button" id="rw-open"><span class="rw-mini" aria-hidden="true">' + dots + '</span><span class="rw-st"><small>REWARDS CARD</small><b>' +
       (full ? 'your free bag of chips is ready!' : n + ' of ' + R.punches + ' punched') + '</b><span>' +
-      (full ? 'Tap to show it at the counter' : '$' + R.minSale + '+ purchase = 1 punch') + '</span></span><span class="rw-go" aria-hidden="true">›</span></button>';
+      (full ? 'Tap to show it at the counter' : phone ? '$' + R.minSale + '+ purchase = 1 punch' : 'Tap to start your card') + '</span></span><span class="rw-go" aria-hidden="true">›</span></button>';
     strip.querySelector('#rw-open').onclick = function(){ openSheet(); };
   }
 
@@ -131,15 +147,28 @@
       '<div class="rw-bar"><i style="width:' + (n / R.punches * 100) + '%"></i></div>' +
       '<div class="rw-bt"><span><b>' + n + '</b> of ' + R.punches + ' punches</span><span>' + (full ? 'Card complete' : left + (left === 1 ? ' more purchase' : ' more purchases') + ' to go') + '</span></div>' +
       (full ? '<div class="rw-ready"><h4>You\'ve earned a ' + R.reward + '!</h4><p>Show this screen at the counter to claim it.</p>' + (extra > 0 ? '<p>' + extra + (extra === 1 ? ' punch carries' : ' punches carry') + ' over to your next card.</p>' : '') + '<button type="button" class="rw-btn" id="rw-claim">Staff: mark as claimed</button></div>' : '') +
+      (phone ?
+      '<p class="rw-who">Card for the number ending <b>' + (rw.last4 || phone.slice(-4)) + '</b> · <button type="button" class="rw-link" id="rw-change">Not you? Change number</button></p>' +
       '<h3>Get a punch</h3><p>Spend $' + R.minSale + ' or more in one purchase and ask at the counter for your punch code.</p>' +
       '<button type="button" class="rw-btn red" id="rw-scan">' + (scanning ? 'Stop camera' : 'Scan code') + '</button>' +
       (scanning ? '<div class="rw-cam"><video playsinline muted autoplay></video><span>Point at the code on the counter phone</span></div>' : '') +
-      '<div class="rw-row"><input id="rw-code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" aria-label="Punch code"><button type="button" class="rw-btn" id="rw-type">Add</button></div>' +
-      '<h3>Your punches</h3>' + (rw.log.length ? '<ul class="rw-hist">' + rw.log.slice(0, 8).map(function(o){ return '<li><span>' + new Date(o.at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) + ' · ' + new Date(o.at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'}) + '</span><span>' + (o.claim ? R.reward + ' claimed' : '+1') + '</span></li>'; }).join('') + '</ul>' : '<p>No punches yet. Your first purchase of $' + R.minSale + '+ starts the card.</p>') +
+      '<div class="rw-row"><input id="rw-code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" aria-label="Punch code"><button type="button" class="rw-btn" id="rw-type">Add</button></div>'
+      :
+      '<div class="rw-phone"><h4>' + (pendingCode ? 'Add your phone number to get this punch' : 'Start your card with your phone number') + '</h4>' +
+      '<p>Your card is saved under your number, so it follows you to any phone or the Snack Hub app. Use the same number every time.' + (legacyLeft() ? ' The ' + legacyLeft() + (legacyLeft() === 1 ? ' punch' : ' punches') + ' already on this phone will move onto it.' : '') + '</p>' +
+      '<div class="rw-row"><input id="rw-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="(716) 555-0123" aria-label="Phone number"><button type="button" class="rw-btn red" id="rw-link">' + (pendingCode ? 'Add punch' : 'Start') + '</button></div></div>') +
+      '<h3>Your punches</h3>' + (rw.log.length ? '<ul class="rw-hist">' + rw.log.slice(0, 8).map(function(o){ return '<li><span>' + new Date(o.at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) + ' · ' + new Date(o.at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'}) + '</span><span>' + (o.claim ? R.reward + ' claimed' : o.carried ? '+' + o.carried + ' moved over' : '+1') + '</span></li>'; }).join('') + '</ul>' : '<p>No punches yet. Your first purchase of $' + R.minSale + '+ starts the card.</p>') +
       '<h3>How it works</h3><p>Each purchase of $' + R.minSale + ' or more earns 1 punch, however much you spend. Fill ' + R.punches + ' punches for a ' + R.reward + '. Punch codes work once and expire after 10 minutes.</p>' +
-      '<p>Your card is saved on this phone, in this browser. Clearing your browser data resets it. If you use the Snack Hub app on your home screen, scan from inside the app (Scan code) so the punch lands there.</p>';
+      '<p>Your card is saved under your phone number, so it works in any browser, on a new phone, or in the Snack Hub app. Just enter the same number.</p>';
     fresh = -1;
     sheet.querySelector('.rw-x').onclick = closeSheet;
+    if(!phone){
+      var tel = sheet.querySelector('#rw-tel');
+      sheet.querySelector('#rw-link').onclick = function(){ link(tel.value); };
+      tel.onkeydown = function(e){ if(e.key === 'Enter') link(tel.value); };
+      return;
+    }
+    sheet.querySelector('#rw-change').onclick = function(){ phone = ''; setLS(PHONE_KEY, null); setLS(CACHE_KEY, null); rw = norm({punches: legacyLeft()}); toast = null; stopScan(false); paintStrip(); render(); };
     sheet.querySelector('#rw-scan').onclick = function(){ scanning ? stopScan(true) : startScan(); };
     var inp = sheet.querySelector('#rw-code');
     sheet.querySelector('#rw-type').onclick = function(){ redeem(inp.value); };
@@ -150,8 +179,12 @@
   sheet.addEventListener('click', function(e){
     var b = e.target.closest('#rw-claim'); if(!b) return;
     if(!b.classList.contains('arm')){ b.classList.add('arm'); b.textContent = 'Tap again to confirm'; clearTimeout(armT); armT = setTimeout(function(){ b.classList.remove('arm'); b.textContent = 'Staff: mark as claimed'; }, 4000); return; }
-    rw.claimed++; rw.log.unshift({at: Date.now(), claim: true}); rw.log = rw.log.slice(0, 40); save();
-    toast = {text: 'Enjoy your ' + R.reward + '! A fresh card is ready.'}; paintStrip(); render();
+    b.disabled = true; b.textContent = 'Saving…';
+    api('/card/claim', {phone: phone}).then(function(x){
+      if(x.j && x.j.log) useCard(x.j);
+      toast = x.ok ? {text: 'Enjoy your ' + R.reward + '! A fresh card is ready.'} : {text: x.j.error || 'Could not mark it claimed. Try again.', bad: true};
+      paintStrip(); render();
+    }).catch(function(){ toast = {text: "Couldn't reach the store. Check your internet and try again.", bad: true}; render(); });
   });
 
   function openSheet(){ ov.hidden = false; document.documentElement.style.overflow = 'hidden'; render(); }
@@ -164,20 +197,35 @@
     var code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if(busy) return;
     if(code.length !== 6){ toast = {text: 'Punch codes have 6 letters and numbers.', bad: true}; if(!ov.hidden) render(); return; }
-    if(rw.log.some(function(o){ return o.code === code; })){ toast = {text: 'That code is already on your card.'}; openSheet(); return; }
+    if(!phone){ pendingCode = code; toast = {text: 'Almost there! Enter your phone number to add this punch.'}; stopScan(false); openSheet(); return; }
     busy = true;
-    fetch(W + '/punch/redeem', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: code})})
-      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return {ok: r.ok, j: j}; }); })
+    api('/punch/redeem', {code: code, phone: phone})
       .then(function(x){
         if(!x.ok){ toast = {text: x.j.error || 'That code did not work. Ask at the counter for a new one.', bad: true}; openSheet(); return; }
         var before = shown();
-        rw.punches += Math.max(1, x.j.punches | 0); rw.log.unshift({code: code, at: Date.now()}); rw.log = rw.log.slice(0, 40); save();
+        if(x.j.card) useCard(x.j.card);
         var n = shown(); fresh = n > before ? before : -1;
         toast = {text: n >= R.punches ? 'Card complete! You\'ve earned a ' + R.reward + '!' : 'Punched! ' + n + ' of ' + R.punches + ' on your card.'};
         stopScan(false); paintStrip(); openSheet();
       })
       .catch(function(){ toast = {text: "Couldn't reach the store. Check your internet and try again.", bad: true}; openSheet(); })
       .then(function(){ busy = false; });
+  }
+
+  // first time: save the card under the customer's phone number, moving over any punches already on this phone
+  function link(raw){
+    var d = digits(raw);
+    if(!d){ toast = {text: 'Please enter a 10-digit phone number.', bad: true}; render(); var t = sheet.querySelector('#rw-tel'); if(t){ t.value = raw; t.focus(); } return; }
+    if(busy) return; busy = true;
+    var carry = legacyLeft();
+    api('/card/open', {phone: d, carry: carry}).then(function(x){
+      busy = false;
+      if(!x.ok){ toast = {text: x.j.error || 'Could not open your card. Try again.', bad: true}; render(); return; }
+      if(carry){ legacy.carried = true; setLS(KEY, legacy); }
+      phone = d; setLS(PHONE_KEY, d); useCard(x.j); paintStrip();
+      toast = {text: carry ? 'Your card is saved! ' + carry + (carry === 1 ? ' punch' : ' punches') + ' moved over from this phone.' : (x.j.punches ? 'Welcome back! Here\'s your card.' : 'Your card is ready!')};
+      if(pendingCode){ var c = pendingCode; pendingCode = null; redeem(c); } else render();
+    }).catch(function(){ busy = false; toast = {text: "Couldn't reach the store. Check your internet and try again.", bad: true}; render(); });
   }
 
   // in-app scanner: built-in BarcodeDetector when the phone has it, otherwise the small jsQR library
@@ -215,6 +263,7 @@
     var game = document.querySelector('.game-feature');
     if(game) game.parentNode.insertBefore(strip, game); else (document.querySelector('main') || document.body).append(strip);
     document.body.append(ov); paintStrip();
+    if(phone) api('/card?phone=' + phone).then(function(x){ if(x.ok && x.j.log){ useCard(x.j); paintStrip(); if(!ov.hidden) render(); } }).catch(function(){});
     // opened from the counter QR code: ...?punch=ABC123
     var m = location.search.match(/[?&]punch=([A-Za-z0-9]{6})/);
     if(m){

@@ -383,7 +383,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         if(!j || code !== pun.code) return;
-        if(j.state === 'used'){ pun.done = true; punStop(); $('pun-qr').className = 'pun-qr dim'; punState('✓ Punched! It’s on their card.', 'ok'); }
+        if(j.state === 'used'){ pun.done = true; punStop(); $('pun-qr').className = 'pun-qr dim'; punState(j.last4 ? '✓ Punched! Card ending ' + j.last4 + ' now has ' + Math.min(10, j.onCard) + ' of 10' + (j.onCard >= 10 ? ' — free bag of chips ready!' : '.') : '✓ Punched! It’s on their card.', 'ok'); }
       }).catch(function(){});
   }
   $('pun-make').addEventListener('click', function(){
