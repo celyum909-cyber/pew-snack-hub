@@ -19,7 +19,7 @@
 
     var css=document.createElement('style');
     css.textContent=
-    '#hs-card{display:block;position:relative;width:100%;margin:0;padding:0;border:0;border-top:1px solid #ff8a1f55;background:#050306;color:#fff;text-align:left;cursor:pointer;overflow:hidden;font-family:inherit;-webkit-tap-highlight-color:transparent}'+
+    '#hs-card{display:block;position:relative;width:100%;margin:-6px 0 52px;padding:0;border:0;border-top:2px solid #ff8a1f;border-bottom:2px solid #ff8a1f;transform:skewY(-6deg);filter:drop-shadow(0 12px 15px #0008);background:#050306;color:#fff;text-align:left;cursor:pointer;overflow:hidden;font-family:inherit;-webkit-tap-highlight-color:transparent}'+
     '#hs-card .hs-bg{display:block;width:100%;height:230px;object-fit:cover;object-position:50% 40%;opacity:.8}'+
     '#hs-card:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#050306 0,#05030600 30%,#050306d0 78%,#050306)}'+
     '#hs-card .hs-copy{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:0 20px 20px}'+
