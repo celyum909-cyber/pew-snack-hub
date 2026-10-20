@@ -82,3 +82,9 @@
 
 /* Pickup ordering pilot: pew-orders.js (delete this block to remove ordering from the app) */
 (function(){try{var s=document.createElement('script');s.src='pew-orders.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+
+/* Deal of the Day countdown timer: pew-timer.js (delete this block to remove the timer) */
+(function(){try{var s=document.createElement('script');s.src='pew-timer.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+
+/* Rewards punch card: pew-rewards.js (delete this block to remove the punch card) */
+(function(){try{var s=document.createElement('script');s.src='pew-rewards.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
