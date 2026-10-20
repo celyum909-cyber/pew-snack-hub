@@ -17,6 +17,7 @@
   css.textContent=
   '#po-dock{position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));z-index:900;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;padding:0 12px}'+
   '#po-dock>button{pointer-events:auto;width:100%;max-width:456px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 16px;border-radius:14px;border:1px solid #ffffff30;font-weight:800;font-size:15px;color:#fff;box-shadow:0 8px 24px #000a;text-align:left}'+
+  '#po-dock>button[hidden]{display:none}'+
   '#po-bar{background:#ef233c}#po-chip{background:#14121a}#po-chip.ready{background:#0f7a3b;animation:populse 1.6s ease-in-out infinite}'+
   '@keyframes populse{50%{box-shadow:0 0 0 6px #3ddc8444}}'+
   '#po-bar small,#po-chip small{display:block;font-weight:600;font-size:12px;opacity:.85;margin-top:2px}'+
