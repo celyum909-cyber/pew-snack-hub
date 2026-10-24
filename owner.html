@@ -105,6 +105,13 @@
   .pun-state{font-weight:800;font-size:15px;margin:8px 0 14px;color:var(--ink-dim)}
   .pun-state.ok{color:#3ee06b;font-size:22px}
   .pun-state.bad{color:var(--red-2)}
+  /* phone alerts */
+  .push-box{margin:22px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .push-row{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:1.4;color:var(--ink-dim);cursor:pointer}
+  .push-row b{color:var(--ink)}
+  .push-row input{flex:none;width:22px;height:22px;margin:1px 0 0;accent-color:var(--red)}
+  .push-box .fields{margin-top:12px}
+  .push-box .hint{margin-top:10px}
   .ord-h2{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:16px 0 8px}
 </style>
 </head>
@@ -185,6 +192,13 @@
           <label>Small print<input type="text" id="f-note" maxlength="160" placeholder="Today's featured combo at the register."></label>
         </div>
       </div>
+      <div class="push-box" id="push-box">
+        <label class="push-row"><input type="checkbox" id="push-on"><span><b>📣 Send a phone alert</b> to customers who turned on deal alerts when I tap Save &amp; Publish</span></label>
+        <div class="fields" id="push-extra" hidden>
+          <label>Alert message <span class="opt">(optional)</span><input type="text" id="push-text" maxlength="160" placeholder="Leave empty to use the price and description"></label>
+        </div>
+        <div class="hint" id="push-info">Checking phone alerts…</div>
+      </div>
     </form>
     </div>
   </section>
@@ -228,7 +242,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   function showEditor(){
     gate.hidden = true; editor.hidden = false; savebar.hidden = tab !== 'deal';
-    loadDeal(); startWatch();
+    loadDeal(); startWatch(); loadPush();
   }
 
   function checkPw(pw){
@@ -338,10 +352,58 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         if(res.s !== 200){ setStatus(res.b.error || ('Save failed (' + res.s + ').')); return; }
         pendingImage = null; fill(res.b.deal);
         setStatus('Published — the new deal is live.', true);
+        if(document.getElementById('push-on').checked){
+          setStatus('Published. Sending phone alert…', true);
+          return sendAlert(document.getElementById('push-text').value).then(function(t){
+            document.getElementById('push-on').checked = false; document.getElementById('push-text').value = '';
+            document.getElementById('push-extra').hidden = true;
+            setStatus('Published — alert sent to ' + t.sent + (t.sent === 1 ? ' phone.' : ' phones.') + (t.failed ? ' (' + t.failed + ' could not be reached.)' : ''), true);
+            loadPush();
+          }, function(err){ setStatus('Published, but the alert was not sent: ' + err.message); loadPush(); });
+        }
       })
       .catch(function(){ setStatus("Couldn't reach the internet. Check your connection and try again."); })
       .finally(function(){ btn.disabled = false; });
   });
+
+  // --- phone alerts (push notifications)
+  var pushOn = document.getElementById('push-on'), pushInfo = document.getElementById('push-info');
+  pushOn.addEventListener('change', function(){ document.getElementById('push-extra').hidden = !pushOn.checked; });
+  function loadPush(){
+    fetch(api + '/push/count', {headers: {'X-Admin-Password': getPw()}, cache: 'no-store'})
+      .then(function(r){ return r.json().then(function(b){ return {s: r.status, b: b}; }); })
+      .then(function(res){
+        var b = res.b;
+        if(res.s !== 200 || !b.ready){
+          pushOn.checked = false; pushOn.disabled = true; document.getElementById('push-extra').hidden = true;
+          pushInfo.textContent = res.s === 200 ? "Phone alerts aren't switched on yet. Run deploy-worker.bat on the computer once." : "Couldn't check phone alerts right now.";
+          return;
+        }
+        var left = Math.max(0, b.perDay - b.sentToday);
+        pushOn.disabled = left === 0 || b.count === 0;
+        if(pushOn.disabled){ pushOn.checked = false; document.getElementById('push-extra').hidden = true; }
+        pushInfo.textContent = (b.count === 1 ? '1 phone gets' : b.count + ' phones get') + ' deal alerts. ' +
+          (b.count === 0 ? 'Customers turn them on with the 🔔 button under the deal on the website.' :
+           left === 0 ? "You've sent today's " + b.perDay + ' alerts — more tomorrow.' : left + ' of ' + b.perDay + ' alerts left today.');
+      })
+      .catch(function(){ pushInfo.textContent = "Couldn't check phone alerts right now."; });
+  }
+  // the Worker sends to a group of phones per call; keep calling until everyone has it
+  function sendAlert(text){
+    var total = {sent: 0, failed: 0}, rounds = 0;
+    function step(body){
+      return fetch(api + '/push/send', {method: 'POST', headers: {'X-Admin-Password': getPw(), 'Content-Type': 'application/json'}, body: JSON.stringify(body)})
+        .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(b){ return {s: r.status, b: b}; }); })
+        .then(function(res){
+          if(res.s !== 200) throw new Error(res.b.error || ('error ' + res.s));
+          total.sent += res.b.sent || 0; total.failed += res.b.failed || 0; rounds++;
+          if(res.b.done || rounds > 200) return total;
+          if(rounds % 3 === 0) setStatus('Sending phone alert… ' + total.sent + ' so far', true);
+          return step({cursor: res.b.cursor, msg: res.b.msg});
+        });
+    }
+    return step({text: text || ''});
+  }
 
 
   // ---------------- tabs + pickup orders ----------------
