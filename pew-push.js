@@ -13,7 +13,8 @@
   var needsInstall = isIOS && !installed;
   if (!supported && !needsInstall) return; // very old browser: show nothing
 
-  var css = '.pew-alerts{position:relative;z-index:4;margin:16px 16px 0;display:flex;align-items:center;gap:12px;width:calc(100% - 32px);padding:12px 14px;border:1px solid #ffffff66;border-radius:16px;background:#0c1224;color:#fff;text-align:left;font:inherit;box-shadow:0 8px 20px #0005}'
+  var css = '.pew-alerts{position:relative;z-index:4;margin:34px 0 22px;display:flex;align-items:center;gap:12px;width:100%;min-height:78px;padding:12px 17px;border:0;border-top:5px solid #ffe340;border-bottom:5px solid #ffe340;border-radius:0;background:#020203;color:#fff;text-align:left;font:inherit;transform:skewY(-6deg);filter:drop-shadow(0 12px 15px #0008);box-shadow:inset 0 1px 0 #ffffff18}'
+    + '.pew-alerts:active{filter:brightness(1.08) drop-shadow(0 12px 15px #0008)}'
     + '.pew-alerts:disabled{opacity:.7;cursor:default}.pew-alerts-ico{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ffe340;color:#0c1224;font-size:19px}'
     + '.pew-alerts-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.pew-alerts-txt b{font-size:15px;font-weight:800}.pew-alerts-txt small{font-size:12.5px;color:#c7ccdb;line-height:1.35}'
     + '.pew-alerts-go{flex:none;padding:8px 13px;border-radius:999px;background:#ed0015;font-size:12px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}'
