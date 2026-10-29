@@ -6,6 +6,10 @@
    browser or the installed app. Punches saved on a phone before this (localStorage "pew-rewards") are carried over once.
    Loaded by pew-catalog.js. To remove the feature, delete the "pew-rewards.js" block at the bottom of pew-catalog.js. */
 (function(){
+  /* ON/OFF SWITCH: false = punch card hidden on the live store. Change to true to turn it back on. */
+  var PUNCH_CARD_ON = false;
+  if(!PUNCH_CARD_ON) return;
+
   var W = 'https://pew-deal.celyum909.workers.dev';
   var R = { punches: 10, minSale: 10, reward: 'free bag of chips', store: 'Depew Snack Hub' };
   var KEY = 'pew-rewards';            // old on-phone card (before phone numbers); only read to carry punches over
