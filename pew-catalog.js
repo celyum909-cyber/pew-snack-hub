@@ -88,3 +88,6 @@
 
 /* Rewards punch card: pew-rewards.js (delete this block to remove the punch card) */
 (function(){try{var s=document.createElement('script');s.src='pew-rewards.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+
+/* Halloween spider: pew-spider.js (turns itself off after Halloween; delete this block to remove it early) */
+(function(){try{var s=document.createElement('script');s.src='pew-spider.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
