@@ -78,7 +78,7 @@ window.__pewSetDealThumb=function(src){var img=document.getElementById('deal-thu
 </script>
   <main class="phone" aria-label="PEW Snack Hub">
     <header class="hero">
-      <video id="hero-video" autoplay muted loop playsinline preload="auto" aria-label="Energy drink showcase"><source type="video/mp4"></video>
+      <video id="hero-video" autoplay muted loop playsinline preload="auto" aria-label="Werewolf energy drink video"><source type="video/mp4"></video>
       <span class="video-status" role="status" aria-live="polite"></span>
       <button class="audio-toggle" type="button" aria-label="Unmute video" title="Unmute video" hidden><span aria-hidden="true">🔇</span></button>
       <button class="motion-toggle" aria-label="Pause video" title="Pause video"><span aria-hidden="true">Ⅱ</span></button>
@@ -125,8 +125,8 @@ window.__pewSetDealThumb=function(src){var img=document.getElementById('deal-thu
 const dialog = document.querySelector('#detail');
 const ASSETS=window.__PEW_ASSETS__;
 const video = document.querySelector('video');
-video.poster=ASSETS["assets/hero-poster.jpg"];
-video.querySelector('source').src=ASSETS["assets/hero.mp4"];
+video.poster="videos/energy-drink-poster.jpg"; // werewolf video plays first
+video.querySelector('source').src="videos/energy-drink.mp4";
 document.querySelector('.floating-logo img').src=ASSETS["assets/logo.png"];
 document.querySelector('.made-by img').src=ASSETS["assets/celyum-logo.png"];
 video.load();
@@ -141,6 +141,7 @@ const gameClose = document.querySelector('#candy-game-close');
 const gameFrame = document.querySelector('#candy-game-frame');
 // One media element: the alternate video is never requested before selection.
 const heroVideos = [
+  {src:'videos/energy-drink.mp4',poster:'videos/energy-drink-poster.jpg',name:'Werewolf energy drink',hasAudio:true},
   {src:ASSETS['assets/hero.mp4'],poster:ASSETS['assets/hero-poster.jpg'],name:'Snack showcase',hasAudio:false},
   {src:ASSETS['assets/voltaris-pepsi.mp4'],poster:ASSETS['assets/voltaris-poster.jpg'],name:'Voltaris Pepsi',hasAudio:false},
   {src:ASSETS['assets/union-rings.mp4'],poster:ASSETS['assets/union-rings-poster.jpg'],name:'Union Rings',hasAudio:true}
@@ -168,6 +169,7 @@ video.addEventListener('pause',syncMotion);
 video.addEventListener('playing',()=>{videoStatus.textContent='';});
 video.addEventListener('error',()=>{videoStatus.textContent='Video could not load. Tap the Snack Hub logo to try another video.';syncMotion();});
 syncMotion();
+syncAudio();
 if(!reducedMotion.matches)playSelected();
 motionButton.addEventListener('click',()=>{if(video.paused)playSelected();else{userPaused=true;video.pause();}});
 audioButton.addEventListener('click',()=>{soundMuted=!soundMuted;syncAudio();if(video.paused)playSelected();});
