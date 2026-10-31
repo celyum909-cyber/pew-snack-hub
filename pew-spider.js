@@ -70,7 +70,7 @@
 
   function walk(){
     if (new Date() >= END){ stop(); return; }
-    if (document.hidden || busy){ later(); return; }
+    if (document.hidden || busy || window.__pewBigSpiderOut){ later(); return; } // wait while the big spider is out
     busy = true;
     var rtl = Math.random() < 0.5;
     box.className = rtl ? 'rtl' : '';
@@ -97,6 +97,7 @@
     s.style.left = (r.left + r.width / 2) + 'px'; s.style.top = (r.top + r.height / 2) + 'px';
     document.body.appendChild(s);
     if (navigator.vibrate) try{ navigator.vibrate(40); }catch(e){}
+    try{ document.dispatchEvent(new Event('pew:spider-squished')); }catch(e){} // the big spider (pew-bigspider.js) comes out
     setTimeout(function(){ s.remove(); }, 1700);
     setTimeout(function(){
       if (anim) anim.cancel(); anim = null;

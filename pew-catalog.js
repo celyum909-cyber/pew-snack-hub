@@ -90,7 +90,10 @@
 (function(){try{var s=document.createElement('script');s.src='pew-rewards.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
 
 /* Halloween spider: pew-spider.js (turns itself off after Halloween; delete this block to remove it early) */
-(function(){try{var s=document.createElement('script');s.src='pew-spider.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+(function(){try{var s=document.createElement('script');s.src='pew-spider.js?v=2';s.defer=true;document.body.appendChild(s)}catch(e){}})();
 
 /* Halloween spooky sounds: pew-spooky.js (owls, wolf howls, wind; turns itself off after Halloween; delete this block to remove it early) */
 (function(){try{var s=document.createElement('script');s.src='pew-spooky.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+
+/* Big hairy Halloween spider: pew-bigspider.js (turns itself off after Halloween; delete this block to remove it early) */
+(function(){try{var s=document.createElement('script');s.src='pew-bigspider.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
