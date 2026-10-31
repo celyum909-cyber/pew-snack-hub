@@ -91,3 +91,6 @@
 
 /* Halloween spider: pew-spider.js (turns itself off after Halloween; delete this block to remove it early) */
 (function(){try{var s=document.createElement('script');s.src='pew-spider.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+
+/* Halloween spooky sounds: pew-spooky.js (owls, wolf howls, wind; turns itself off after Halloween; delete this block to remove it early) */
+(function(){try{var s=document.createElement('script');s.src='pew-spooky.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
