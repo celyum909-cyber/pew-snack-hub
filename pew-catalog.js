@@ -46,8 +46,9 @@
         if(!v||!v.file)return;
         heroVideos.push({src:'videos/'+v.file,poster:v.poster?'videos/'+v.poster:'',name:v.name||v.file,hasAudio:!!v.audio});
       });
+      var SKIP=['vmupuoitima5h','vmur152nbrjf7']; // taken off the app Nov 1 (Funyuns creatures, Ghost Busters) - still saved in the Manager app
       if(b&&Array.isArray(b.list))b.list.forEach(function(v){
-        if(!v||!v.id)return;
+        if(!v||!v.id||SKIP.indexOf(v.id)>=0)return;
         heroVideos.push({src:W+'/videos/file/'+v.id+'?v='+v.updated,poster:v.hasPoster?W+'/videos/poster/'+v.id+'?v='+v.updated:'',name:v.name||'Video',hasAudio:!!v.audio});
       });
       var lb=document.querySelector('.floating-logo');
