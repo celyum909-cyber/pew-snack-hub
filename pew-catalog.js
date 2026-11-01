@@ -92,3 +92,6 @@
 
 /* Autumn leaves: pew-leaves.js (turns itself off after Thanksgiving; delete this block to remove it early) */
 (function(){try{var s=document.createElement('script');s.src='pew-leaves.js?v=3';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+
+/* NFL score ticker: pew-nfl.js (slanted strip under the Deal of the Day; delete this block to remove it) */
+(function(){try{var s=document.createElement('script');s.src='pew-nfl.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
