@@ -1,3 +1,5 @@
 {
-  "videos": []
+  "videos": [
+    { "name": "Robo Vender", "file": "robo-vender.mp4", "poster": "robo-vender-poster.jpg", "audio": true }
+  ]
 }
