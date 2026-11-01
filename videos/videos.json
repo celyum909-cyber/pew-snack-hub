@@ -1,5 +1,3 @@
 {
-  "videos": [
-    { "name": "Dracula", "file": "dracula.mp4", "poster": "dracula-poster.jpg", "audio": true }
-  ]
+  "videos": []
 }
