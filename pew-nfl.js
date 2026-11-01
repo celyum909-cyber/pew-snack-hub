@@ -3,6 +3,8 @@
    with this week's NFL games scrolling across: live scores, finals and upcoming kickoff times.
    Tap a game to open a card with more about it: records, quarter-by-quarter score, who has the ball,
    down and distance, last play, win chances, top players, TV channel and stadium.
+   On days with no NFL games the strip folds down to a small "NFL" tag. Tapping the tag opens it to show
+   that there are no games today and what's coming up next; tapping it again closes it.
    Bills games are highlighted. Scores come from ESPN's free public scoreboard and refresh every 30 seconds
    while the strip is on screen. If the scores can't load, the strip hides itself.
    Loaded by pew-catalog.js. To remove it, delete the "pew-nfl.js" block at the bottom of pew-catalog.js. */
@@ -16,10 +18,14 @@
     '#pew-nfl{position:relative;z-index:3;width:100%;margin:40px 0 18px;padding:5px 0;background:linear-gradient(90deg,#0756d9,#ed0015);transform:skewY(-6deg);filter:drop-shadow(0 12px 15px #0008)}' +
     '#pew-nfl[hidden]{display:none}' +
     '#pew-nfl .nfl-in{display:flex;align-items:center;height:56px;background:#020203;color:#fff;overflow:hidden;box-shadow:inset 0 1px 0 #ffffff18}' +
-    '#pew-nfl .nfl-tag{flex:none;display:flex;align-items:center;gap:6px;height:100%;padding:0 12px 0 14px;background:#020203;font-size:13px;font-weight:950;letter-spacing:1px;color:#ffe340;position:relative;z-index:1;box-shadow:10px 0 12px #020203}' +
+    '#pew-nfl .nfl-tag{flex:none;display:flex;align-items:center;gap:6px;height:100%;margin:0;border:0;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;padding:0 12px 0 14px;background:#020203;font-size:13px;font-weight:950;letter-spacing:1px;color:#ffe340;position:relative;z-index:1;box-shadow:10px 0 12px #020203}' +
     '#pew-nfl .nfl-view{flex:1;min-width:0;overflow:hidden;height:100%;display:flex;align-items:center}' +
     '#pew-nfl .nfl-track{display:flex;width:max-content;will-change:transform;animation:nflscroll var(--nfl-dur,40s) linear infinite}' +
-    '#pew-nfl.paused .nfl-track{animation-play-state:paused}' +
+    '#pew-nfl.paused .nfl-track,#pew-nfl .nfl-track.still{animation-play-state:paused}' +
+    '#pew-nfl .car{font-size:11px;color:#8b98a5;margin-left:2px;transition:transform .2s}#pew-nfl:not(.closed) .car{transform:rotate(90deg)}' +
+    '#pew-nfl .msg{display:inline-flex;align-items:center;gap:8px;height:56px;padding:0 16px;font-size:14px;font-weight:800;color:#c9d3dd;white-space:nowrap;border-right:1px solid #ffffff1f}#pew-nfl .msg em{font-style:normal;color:#8b98a5;font-weight:700}' +
+    /* folded down to a small tag on days with no games */
+    '#pew-nfl.closed{width:max-content;margin:30px 0 10px 16px;padding:3px}#pew-nfl.closed .nfl-in{height:38px}#pew-nfl.closed .nfl-view{display:none}#pew-nfl.closed .nfl-tag{box-shadow:none;padding:0 14px}' +
     '@keyframes nflscroll{to{transform:translateX(-50%)}}' +
     '@media (prefers-reduced-motion:reduce){#pew-nfl .nfl-view{overflow-x:auto}#pew-nfl .nfl-track{animation:none}}' +
     '#pew-nfl .g{display:inline-flex;align-items:center;gap:7px;height:56px;margin:0;padding:0 16px;border:0;border-right:1px solid #ffffff1f;background:none;color:inherit;font:inherit;font-size:15px;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
@@ -55,6 +61,7 @@
     '#nfl-card .info{margin-top:16px;font-size:13px;color:#8b98a5;line-height:1.6}#nfl-card .info b{color:#e8edf2}';
 
   var box, track, timer = 0, lastHtml = '', visible = true, byId = {};
+  var gameDay = null, userOpen = null; // userOpen: null = automatic, true/false = the customer tapped the tag
 
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
@@ -106,15 +113,26 @@
         var sa = a.competitions[0].status.type.state, sb = b.competitions[0].status.type.state;
         return (rank[sa] - rank[sb]) || (new Date(a.date) - new Date(b.date));
       });
-      var html = evs.map(gameHtml).join('');
-      if (!html){ box.hidden = true; return; }
+      // is there NFL football today? (a game live right now, or one that starts/started today)
+      var today = new Date().toDateString();
+      var isDay = evs.some(function(e){ var st = e.competitions[0].status.type.state; return st === 'in' || new Date(e.competitions[0].date || e.date).toDateString() === today; });
+      if (isDay !== gameDay){ gameDay = isDay; userOpen = null; }
       var live = evs.some(function(e){ return e.competitions[0].status.type.state === 'in'; });
-      box.querySelector('.nfl-tag').innerHTML = (live ? '<span class="dot"></span>' : '🏈') + 'NFL';
+      var html, still = false;
+      if (gameDay) html = evs.map(gameHtml).join('');
+      else {
+        var next = evs.filter(function(e){ return e.competitions[0].status.type.state === 'pre'; }).map(gameHtml).join('');
+        html = '<span class="msg">No NFL games today' + (next ? ' <em>· Coming up:</em>' : '') + '</span>' + next;
+        still = !next;
+      }
+      box.querySelector('.nfl-tag').innerHTML = (live ? '<span class="dot"></span>' : '🏈') + 'NFL<span class="car" aria-hidden="true">▶</span>';
       if (html !== lastHtml){
         lastHtml = html;
-        track.innerHTML = html + html; // two copies so the loop is seamless
+        track.innerHTML = still ? html : html + html; // two copies so the loop is seamless
+        track.classList.toggle('still', still);
         requestAnimationFrame(function(){ track.style.setProperty('--nfl-dur', Math.max(20, track.scrollWidth / 2 / SPEED) + 's'); });
       }
+      applyOpen();
       box.hidden = false;
     }).catch(function(){ if (!lastHtml) box.hidden = true; })
       .then(function(){ timer = setTimeout(load, ov && !ov.hidden ? CARD_REFRESH : REFRESH); });
@@ -190,6 +208,14 @@
   }
   function closeGame(){ ov.hidden = true; openId = null; document.documentElement.style.overflow = ''; clearTimeout(timer); timer = setTimeout(load, REFRESH); }
 
+  function applyOpen(){
+    var open = userOpen != null ? userOpen : !!gameDay;
+    box.classList.toggle('closed', !open);
+    var tag = box.querySelector('.nfl-tag');
+    tag.setAttribute('aria-expanded', open ? 'true' : 'false');
+    tag.setAttribute('aria-label', open ? 'NFL scores - tap to close' : 'NFL scores - tap to open');
+  }
+
   function place(){
     var deal = document.getElementById('deal'); if (!deal) return false;
     var alerts = document.getElementById('pew-alerts');
@@ -202,11 +228,12 @@
     document.head.appendChild(css);
     box = document.createElement('section');
     box.id = 'pew-nfl'; box.hidden = true; box.setAttribute('aria-label', 'NFL scores');
-    box.innerHTML = '<div class="nfl-in"><span class="nfl-tag">🏈NFL</span><div class="nfl-view"><div class="nfl-track"></div></div></div>';
+    box.innerHTML = '<div class="nfl-in"><button type="button" class="nfl-tag">🏈NFL</button><div class="nfl-view"><div class="nfl-track"></div></div></div>';
     track = box.querySelector('.nfl-track');
     // hold the strip still while a finger is on it, so a game is easy to tap
     box.addEventListener('pointerdown', function(){ clearTimeout(holdT); box.classList.add('touch'); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev){ box.addEventListener(ev, function(){ clearTimeout(holdT); holdT = setTimeout(function(){ box.classList.remove('touch'); }, 1500); }); });
+    box.querySelector('.nfl-tag').addEventListener('click', function(){ userOpen = box.classList.contains('closed'); applyOpen(); });
     track.addEventListener('click', function(e){ var g = e.target.closest('.g'); if (g && g.dataset.id) openGame(g.dataset.id); });
     if (!place()) return;
     // the deal alerts strip may be added a moment later; keep the ticker above it
