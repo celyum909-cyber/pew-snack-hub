@@ -1,6 +1,8 @@
 /* Depew Snack Hub - autumn leaves.
    Every couple of seconds a leaf drifts slowly down across the app, swaying and spinning.
    Orange, red, gold, green and brown, in maple, oak and birch shapes. Taps go straight through them.
+   Some leaves land in a thin pile along the bottom. The pile clears slowly on its own,
+   and swiping a finger across it brushes the leaves away.
    Turns itself off automatically after Thanksgiving (from Nov 27, phone's local time).
    Loaded by pew-catalog.js. To remove it early, delete the "pew-leaves.js" block at the bottom of pew-catalog.js. */
 (function(){
@@ -50,21 +52,80 @@
       '<path d="' + shape + '" fill="url(#' + gid + ')"/><path d="' + VEINS + '" stroke="#0000002e" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
     layer.appendChild(el); count++;
 
-    // drift down with a gentle side-to-side sway, slowly spinning and tilting
+    // drift down with a gentle side-to-side sway, slowly spinning and tilting.
+    // Some leaves land on the pile at the bottom of the screen instead of falling off it.
+    var lands = pile.length < PILE_MAX && Math.random() < LAND_CHANCE;
     var x0 = rnd(-0.05, 1.0) * w, drift = rnd(-0.25, 0.25) * w, sway = rnd(25, 60), swings = Math.round(rnd(2, 4));
     var dur = rnd(9000, 14000), spin = rnd(-360, 360), steps = 24, frames = [];
+    var restY = h - size * rnd(0.55, 0.95), restRot = rnd(-180, 180), endX = 0;
+    if (lands){ x0 = rnd(0.02, 0.92) * w; drift = rnd(-0.12, 0.12) * w; }
+    var fallTo = lands ? restY : h + 60;
     for (var i = 0; i <= steps; i++){
-      var t = i / steps, s = Math.sin(t * Math.PI * 2 * swings / 2);
-      var x = x0 + drift * t + s * sway, y = -60 + t * (h + 120);
-      frames.push({transform: 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (spin * t + s * 25).toFixed(1) + 'deg) rotateX(' + (s * 55).toFixed(1) + 'deg)',
-        opacity: t < 0.05 ? t / 0.05 : t > 0.92 ? (1 - t) / 0.08 : 0.9});
+      var t = i / steps, s = Math.sin(t * Math.PI * 2 * swings / 2), settle = lands ? Math.max(0, (t - 0.85) / 0.15) : 0;
+      var x = x0 + drift * t + s * sway * (1 - settle), y = -60 + t * (fallTo + 60);
+      if (i === steps) endX = x;
+      var rot = lands && i === steps ? restRot : spin * t + s * 25, tilt = lands ? s * 55 * (1 - settle) : s * 55;
+      frames.push({transform: 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + rot.toFixed(1) + 'deg) rotateX(' + tilt.toFixed(1) + 'deg)',
+        opacity: t < 0.05 ? t / 0.05 : (!lands && t > 0.92) ? (1 - t) / 0.08 : 0.92});
     }
-    var a = el.animate(frames, {duration: dur, easing: 'linear', fill: 'forwards'});
-    a.onfinish = function(){ el.remove(); count--; };
+    var a = el.animate(frames, {duration: dur, easing: lands ? 'cubic-bezier(.2,0,.6,1)' : 'linear', fill: 'forwards'});
+    a.onfinish = function(){
+      count--;
+      if (!lands){ el.remove(); return; }
+      rest(el, endX, restY, restRot, size);
+    };
     next();
   }
+
+  // ---------- the pile at the bottom ----------
+  // A thin pile that clears slowly on its own. Swiping a finger across it brushes leaves away.
+  // The leaves never block taps, so buttons underneath always work.
+  var PILE_MAX = 22, LAND_CHANCE = 0.45, pile = [];
+  function rest(el, x, y, rot, size){
+    var p = {el: el, x: x, y: y, rot: rot, size: size, gone: false};
+    pile.push(p);
+    p.fade = setTimeout(function(){ crumble(p); }, rnd(25000, 45000)); // clears slowly on its own
+    while (pile.length > PILE_MAX) crumble(pile[0]);
+  }
+  function drop(p){ p.gone = true; clearTimeout(p.fade); var i = pile.indexOf(p); if (i >= 0) pile.splice(i, 1); }
+  function crumble(p){
+    if (p.gone) return; drop(p);
+    var base = 'translate(' + p.x.toFixed(1) + 'px,' + p.y.toFixed(1) + 'px) rotate(' + p.rot.toFixed(1) + 'deg)';
+    p.el.getAnimations().forEach(function(an){ an.cancel(); });
+    p.el.animate([{transform: base, opacity: .92}, {transform: base + ' scale(.6)', opacity: 0}], {duration: 2200, easing: 'ease-in', fill: 'forwards'}).onfinish = function(){ p.el.remove(); };
+  }
+  function brush(p, vx, vy, fx, fy){
+    if (p.gone) return; drop(p);
+    var cx = p.x + p.size / 2, cy = p.y + p.size / 2, dx = cx - fx, dy = cy - fy, d = Math.hypot(dx, dy) || 1;
+    // push the leaf away from the finger, plus the way the finger is moving, with a little upward toss
+    var px = dx / d * 90 + vx * 0.35, py = dy / d * 50 + vy * 0.35 - rnd(60, 120);
+    var spinTo = p.rot + rnd(-540, 540);
+    var from = 'translate(' + p.x.toFixed(1) + 'px,' + p.y.toFixed(1) + 'px) rotate(' + p.rot.toFixed(1) + 'deg)';
+    var mid = 'translate(' + (p.x + px * .6).toFixed(1) + 'px,' + (p.y + py * .6).toFixed(1) + 'px) rotate(' + ((p.rot + spinTo) / 2).toFixed(1) + 'deg)';
+    var to = 'translate(' + (p.x + px).toFixed(1) + 'px,' + (p.y + py + 140).toFixed(1) + 'px) rotate(' + spinTo.toFixed(1) + 'deg)';
+    p.el.getAnimations().forEach(function(an){ an.cancel(); });
+    p.el.animate([{transform: from, opacity: .92}, {transform: mid, opacity: .85, offset: .45}, {transform: to, opacity: 0}],
+      {duration: 900, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards'}).onfinish = function(){ p.el.remove(); };
+  }
+  var lastPt = null;
+  function sweep(x, y){
+    var t = performance.now(), vx = 0, vy = 0;
+    if (lastPt && t - lastPt.t < 120){ var dt = Math.max(8, t - lastPt.t); vx = (x - lastPt.x) / dt * 1000; vy = (y - lastPt.y) / dt * 1000; }
+    lastPt = {x: x, y: y, t: t};
+    if (!pile.length) return;
+    var reach = 34;
+    pile.slice().forEach(function(p){
+      var cx = p.x + p.size / 2, cy = p.y + p.size / 2;
+      if (Math.abs(cx - x) < p.size / 2 + reach && Math.abs(cy - y) < p.size / 2 + reach) brush(p, vx, vy, x, y);
+    });
+  }
+  window.addEventListener('pointermove', function(e){ if (e.pointerType !== 'mouse' || e.buttons) sweep(e.clientX, e.clientY); }, {passive: true});
+  window.addEventListener('pointerdown', function(e){ lastPt = null; sweep(e.clientX, e.clientY); }, {passive: true});
+  window.addEventListener('touchmove', function(e){ var t = e.touches[0]; if (t) sweep(t.clientX, t.clientY); }, {passive: true});
+  window.addEventListener('resize', function(){ pile.slice().forEach(crumble); });
+
   function next(){ clearTimeout(timer); timer = setTimeout(leaf, rnd(EVERY_MIN, EVERY_MAX)); }
-  function stop(){ clearTimeout(timer); layer.remove(); }
+  function stop(){ clearTimeout(timer); pile.slice().forEach(drop); layer.remove(); }
 
   function start(){ document.body.appendChild(layer); timer = setTimeout(leaf, 800); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
