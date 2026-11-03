@@ -3,8 +3,9 @@
    with this week's NFL games scrolling across: live scores, finals and upcoming kickoff times.
    Tap a game to open a card with more about it: records, quarter-by-quarter score, who has the ball,
    down and distance, last play, win chances, top players, TV channel and stadium.
-   On days with no NFL games the strip folds down to a small "NFL" tag. Tapping the tag opens it to show
-   that there are no games today and what's coming up next; tapping it again closes it.
+   The strip starts folded to a small "NFL" tag (it says "GAME IS ON!" while a game is live); a customer who taps it
+   open keeps it open on their phone until they close it. On days with no NFL games the open strip shows
+   that there are no games today and what's coming up next.
    Bills games are highlighted. Scores come from ESPN's free public scoreboard and refresh every 30 seconds
    while the strip is on screen. If the scores can't load, the strip hides itself.
    Loaded by pew-catalog.js. To remove it, delete the "pew-nfl.js" block at the bottom of pew-catalog.js. */
@@ -25,7 +26,9 @@
     '#pew-nfl .car{font-size:11px;color:#8b98a5;margin-left:2px;transition:transform .2s}#pew-nfl:not(.closed) .car{transform:rotate(90deg)}' +
     '#pew-nfl .msg{display:inline-flex;align-items:center;gap:8px;height:56px;padding:0 16px;font-size:14px;font-weight:800;color:#c9d3dd;white-space:nowrap;border-right:1px solid #ffffff1f}#pew-nfl .msg em{font-style:normal;color:#8b98a5;font-weight:700}' +
     /* folded down to a small tag on days with no games */
-    '#pew-nfl.closed{width:max-content;margin:30px 0 10px 16px;padding:3px}#pew-nfl.closed .nfl-in{height:38px}#pew-nfl.closed .nfl-view{display:none}#pew-nfl.closed .nfl-tag{box-shadow:none;padding:0 14px}' +
+    '#pew-nfl.closed{width:max-content;margin:30px 0 10px 16px;padding:3px}#pew-nfl.closed .nfl-in{height:38px}#pew-nfl.closed .nfl-view{display:none}#pew-nfl.closed .nfl-tag{box-shadow:none;padding:0 14px}#pew-nfl.closed.live .nfl-tag{color:#9dff57}' +
+    /* folded: the tag and the PLAY button (pew-backyard.js) share one line */
+    '#pew-nfl.closed{display:inline-block;vertical-align:top;margin:22px 0 6px 16px}' +
     '@keyframes nflscroll{to{transform:translateX(-50%)}}' +
     '@media (prefers-reduced-motion:reduce){#pew-nfl .nfl-view{overflow-x:auto}#pew-nfl .nfl-track{animation:none}}' +
     '#pew-nfl .g{display:inline-flex;align-items:center;gap:7px;height:56px;margin:0;padding:0 16px;border:0;border-right:1px solid #ffffff1f;background:none;color:inherit;font:inherit;font-size:15px;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
@@ -61,7 +64,9 @@
     '#nfl-card .info{margin-top:16px;font-size:13px;color:#8b98a5;line-height:1.6}#nfl-card .info b{color:#e8edf2}';
 
   var box, track, timer = 0, lastHtml = '', visible = true, byId = {};
-  var gameDay = null, userOpen = null; // userOpen: null = automatic, true/false = the customer tapped the tag
+  // The strip starts folded to its tag. A customer who taps it open keeps it open (on this phone) until they close it.
+  var OPEN_KEY = 'pew-nfl-open', gameDay = null, live = false;
+  var userOpen = (function(){ try { return localStorage.getItem(OPEN_KEY) === '1'; } catch(e){ return false; } })();
 
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
@@ -116,8 +121,8 @@
       // is there NFL football today? (a game live right now, or one that starts/started today)
       var today = new Date().toDateString();
       var isDay = evs.some(function(e){ var st = e.competitions[0].status.type.state; return st === 'in' || new Date(e.competitions[0].date || e.date).toDateString() === today; });
-      if (isDay !== gameDay){ gameDay = isDay; userOpen = null; }
-      var live = evs.some(function(e){ return e.competitions[0].status.type.state === 'in'; });
+      gameDay = isDay;
+      live = evs.some(function(e){ return e.competitions[0].status.type.state === 'in'; });
       var html, still = false;
       if (gameDay) html = evs.map(gameHtml).join('');
       else {
@@ -125,7 +130,6 @@
         html = '<span class="msg">No NFL games today' + (next ? ' <em>· Coming up:</em>' : '') + '</span>' + next;
         still = !next;
       }
-      box.querySelector('.nfl-tag').innerHTML = (live ? '<span class="dot"></span>' : '🏈') + 'NFL<span class="car" aria-hidden="true">▶</span>';
       if (html !== lastHtml){
         lastHtml = html;
         track.innerHTML = still ? html : html + html; // two copies so the loop is seamless
@@ -209,9 +213,12 @@
   function closeGame(){ ov.hidden = true; openId = null; document.documentElement.style.overflow = ''; clearTimeout(timer); timer = setTimeout(load, REFRESH); }
 
   function applyOpen(){
-    var open = userOpen != null ? userOpen : !!gameDay;
+    var open = userOpen;
     box.classList.toggle('closed', !open);
+    box.classList.toggle('live', live);
     var tag = box.querySelector('.nfl-tag');
+    // folded during a live game: the tag says the game is on
+    tag.innerHTML = (live ? '<span class="dot"></span>' : '🏈') + (live && !open ? 'GAME IS ON!' : 'NFL') + '<span class="car" aria-hidden="true">▶</span>';
     tag.setAttribute('aria-expanded', open ? 'true' : 'false');
     tag.setAttribute('aria-label', open ? 'NFL scores - tap to close' : 'NFL scores - tap to open');
   }
@@ -233,7 +240,7 @@
     // hold the strip still while a finger is on it, so a game is easy to tap
     box.addEventListener('pointerdown', function(){ clearTimeout(holdT); box.classList.add('touch'); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev){ box.addEventListener(ev, function(){ clearTimeout(holdT); holdT = setTimeout(function(){ box.classList.remove('touch'); }, 1500); }); });
-    box.querySelector('.nfl-tag').addEventListener('click', function(){ userOpen = box.classList.contains('closed'); applyOpen(); });
+    box.querySelector('.nfl-tag').addEventListener('click', function(){ userOpen = box.classList.contains('closed'); try { localStorage.setItem(OPEN_KEY, userOpen ? '1' : '0'); } catch(e){} applyOpen(); });
     track.addEventListener('click', function(e){ var g = e.target.closest('.g'); if (g && g.dataset.id) openGame(g.dataset.id); });
     if (!place()) return;
     // the deal alerts strip may be added a moment later; keep the ticker above it

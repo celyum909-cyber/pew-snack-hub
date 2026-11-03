@@ -94,7 +94,7 @@
 (function(){try{var s=document.createElement('script');s.src='pew-leaves.js?v=3';s.defer=true;document.body.appendChild(s)}catch(e){}})();
 
 /* NFL score ticker: pew-nfl.js (slanted strip under the Deal of the Day; delete this block to remove it) */
-(function(){try{var s=document.createElement('script');s.src='pew-nfl.js?v=3';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+(function(){try{var s=document.createElement('script');s.src='pew-nfl.js?v=4';s.defer=true;document.body.appendChild(s)}catch(e){}})();
 
 /* Backyard Toss game: pew-backyard.js (small PLAY button above the NFL ticker; delete this block to remove it) */
-(function(){try{var s=document.createElement('script');s.src='pew-backyard.js?v=2';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+(function(){try{var s=document.createElement('script');s.src='pew-backyard.js?v=3';s.defer=true;document.body.appendChild(s)}catch(e){}})();

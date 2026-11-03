@@ -1,5 +1,5 @@
 /* Depew Snack Hub - Backyard Toss game.
-   A small slanted "PLAY" button in the red area just below the NFL ticker (same size as the ticker's NFL tag).
+   A small slanted "PLAY" button: beside the NFL tag while the ticker is folded, just below the ticker when it is open.
    Tapping it opens the Backyard Toss game (backyard/index.html) full screen, with a × bar on top to close it.
    Loaded by pew-catalog.js. To remove it, delete the "pew-backyard.js" block at the bottom of pew-catalog.js. */
 (function(){
@@ -8,6 +8,8 @@
     '#bt-play{position:relative;z-index:4;display:block;width:max-content;margin:4px 0 -22px 16px;padding:3px;border:0;background:linear-gradient(90deg,#2f8f3a,#ffe340);transform:skewY(-6deg);filter:drop-shadow(0 8px 10px #0008);cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit}' +
     '#bt-play span{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;background:#020203;color:#ffe340;font-size:13px;font-weight:950;letter-spacing:1px}' +
     '#bt-play b{color:#fff;font-size:11px}' +
+    /* when the NFL ticker is folded to its tag, PLAY sits beside it on the same slanted line */
+    '#pew-nfl.closed + #bt-play{display:inline-block;vertical-align:top;margin:10px 0 6px 10px}' +
     '#bt-play:active{filter:brightness(1.15) drop-shadow(0 8px 10px #0008)}' +
     '#bt-ov{position:fixed;inset:0;z-index:1000;width:100%;max-width:480px;margin:auto;background:#07130e;display:flex;flex-direction:column}' +
     '#bt-ov[hidden]{display:none}' +
