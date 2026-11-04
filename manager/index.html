@@ -59,6 +59,10 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
 .photo{width:190px;height:190px;border-radius:16px;background:var(--surface2);border:1px dashed var(--line);object-fit:cover;display:block;margin:0 auto}
 .photo.has{border:0}
 .photobtn{display:block;margin:12px auto 4px;width:220px;text-align:center}
+.cmt{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}.cmt.new{border-color:var(--red)}.cmt.read{opacity:.65}
+.cmt-h{display:flex;justify-content:space-between;gap:8px;font-size:15px}.cmt-h span{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--dim)}.cmt.new .cmt-h span{color:#ff9aa0}
+.cmt-m{font-size:12px;color:var(--faint);margin:2px 0 6px}.cmt-t{white-space:pre-wrap;font-size:15px;line-height:1.5;word-break:break-word}
+.cmt-a{display:flex;gap:8px;margin-top:10px}.cmt-a .btn{flex:1;padding:11px}
 .hint{font-size:12px;color:var(--faint);line-height:1.45;margin:6px 0 0}
 .field{display:flex;flex-direction:column;gap:6px;margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .field input,.field textarea{padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);font-size:16px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);width:100%}
@@ -117,7 +121,7 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
     <span class="role" id="role"></span>
   </div>
   <div class="links"><a href="https://celyum909-cyber.github.io/pew-snack-hub/" target="_blank" rel="noopener">View the app</a><a href="https://celyum909-cyber.github.io/pew-snack-hub/owner.html" target="_blank" rel="noopener">Deal of the Day</a><button id="logout" type="button">Log out</button></div>
-  <div class="tabs"><button type="button" id="tabP" class="on">Products</button><button type="button" id="tabV">Videos</button><button type="button" id="tabS">Stats</button></div>
+  <div class="tabs"><button type="button" id="tabP" class="on">Products</button><button type="button" id="tabV">Videos</button><button type="button" id="tabS">Stats</button><button type="button" id="tabC">Comments</button></div>
   <div id="pane-p">
   <input class="search" id="search" type="search" placeholder="Search products" aria-label="Search products">
   <div id="list"><div class="loading">Loading products...</div></div>
@@ -126,6 +130,11 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
     <div id="statsBody"><div class="loading">Loading numbers...</div></div>
     <button class="btn btn-line" id="statsRefresh" type="button" style="width:100%;margin-top:6px">Refresh</button>
     <p class="hint" style="margin-top:12px">Counts are anonymous: each phone gets a random code, never a name. Android reports installs directly. iPhones can't, so they are counted when someone opens the app from the home screen. Counting started the day this was turned on.</p>
+  </div>
+  <div id="pane-c" hidden>
+    <p class="hint" style="margin:0 0 12px">What players typed into <b>Leave a comment</b> under the Cube Tetris test game. Only the manager login can see them.</p>
+    <div id="clist"><div class="loading">Loading comments...</div></div>
+    <button class="btn btn-line" id="cAllRead" type="button" style="width:100%;margin-top:6px">Mark all as read</button>
   </div>
   <div id="pane-v" hidden>
     <p class="hint" style="margin:0 0 12px">Videos you add here show up when someone taps the Snack Hub logo, after the built-in videos. MP4 files up to 24 MB work best (about 10 to 15 seconds).</p>
@@ -207,6 +216,7 @@ async function start(p,r){
   pw=p;role=r;
   $('gate').hidden=true;$('app').hidden=false;
   $('role').textContent='Manager';
+  loadComments(true);setInterval(function(){if(!document.hidden)loadComments(true)},60000);
   try{
     var res=await Promise.all([fetch('catalog.json').then(function(x){return x.json()}),fetch(API+'/products',{cache:'no-store'}).then(function(x){return x.json()})]);
     catalog=res[0];edits=(res[1]&&res[1].edits)||{};
@@ -340,8 +350,8 @@ $('reset').addEventListener('click',async function(){
 
 // ---------------- VIDEOS ----------------
 var vids=[],vLoaded=false,vCur=null,vNewFile=null,vNewPoster=null,vBusy=false;
-function showTab(t){$('tabP').className=t==='p'?'on':'';$('tabV').className=t==='v'?'on':'';$('tabS').className=t==='s'?'on':'';$('pane-p').hidden=t!=='p';$('pane-v').hidden=t!=='v';$('pane-s').hidden=t!=='s';if(t==='v'&&!vLoaded)loadVideos();if(t==='s')loadStats()}
-$('tabP').addEventListener('click',function(){showTab('p')});$('tabV').addEventListener('click',function(){showTab('v')});$('tabS').addEventListener('click',function(){showTab('s')});$('statsRefresh').addEventListener('click',function(){loadStats()});
+function showTab(t){$('tabP').className=t==='p'?'on':'';$('tabV').className=t==='v'?'on':'';$('tabS').className=t==='s'?'on':'';$('pane-p').hidden=t!=='p';$('pane-v').hidden=t!=='v';$('pane-s').hidden=t!=='s';$('tabC').className=t==='c'?'on':'';$('pane-c').hidden=t!=='c';if(t==='v'&&!vLoaded)loadVideos();if(t==='s')loadStats();if(t==='c')loadComments()}
+$('tabP').addEventListener('click',function(){showTab('p')});$('tabV').addEventListener('click',function(){showTab('v')});$('tabS').addEventListener('click',function(){showTab('s')});$('statsRefresh').addEventListener('click',function(){loadStats()});$('tabC').addEventListener('click',function(){showTab('c')});
 
 async function loadVideos(){
   try{var r=await fetch(API+'/videos',{cache:'no-store'});var j=await r.json();vids=j.list||[];vLoaded=true;renderVideos()}
@@ -457,6 +467,41 @@ async function loadStats(){
     var ax=el('div','axis');ax.append(el('span',null,j.series[0].d.slice(5)),el('span',null,'today'));box.append(ax);
   }catch(e){box.innerHTML='';box.append(el('div','loading',e.message||"Couldn't load the numbers."))}
 }
+
+// ---------------- COMMENTS (private feedback from the Cube Tetris test game) ----------------
+var GAME_NAME={cube:'Cube Tetris',backyard:'Backyard Toss'},PHONE={i:'iPhone',a:'Android',o:'computer'};
+function ago(ts){var m=Math.max(0,Math.round((Date.now()-ts)/60000));if(m<1)return 'just now';if(m<60)return m+' min ago';var h=Math.round(m/60);return h<24?h+' hr ago':new Date(ts).toLocaleDateString()}
+async function cPost(path,body){
+  var r=await fetch(API+'/feedback/'+path,{method:'POST',headers:{'X-Admin-Password':pw,'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  if(r.status===401){clearPw();location.reload();return}
+  loadComments(true);
+}
+function cCard(f){
+  var c=el('div','cmt '+(f.read?'read':'new')),h=el('div','cmt-h');
+  h.append(el('b',null,f.name||'Someone'),el('span',null,f.read?'READ':'NEW'));c.append(h);
+  c.append(el('div','cmt-m',ago(f.at)+' · '+(GAME_NAME[f.game]||f.game)+(PHONE[f.p]?' · '+PHONE[f.p]:'')));
+  c.append(el('div','cmt-t',f.text));
+  var a=el('div','cmt-a'),r=el('button','btn btn-line',f.read?'Mark unread':'Mark read'),d=el('button','btn btn-line','Delete');r.type=d.type='button';
+  r.addEventListener('click',function(){r.disabled=true;cPost(f.id,{read:!f.read})});
+  d.addEventListener('click',function(){if(d.dataset.arm){d.disabled=true;cPost(f.id,{delete:true})}else{d.dataset.arm='1';d.textContent='Tap again to delete';setTimeout(function(){delete d.dataset.arm;d.textContent='Delete'},3000)}});
+  a.append(r,d);c.append(a);return c;
+}
+async function loadComments(quiet){
+  var box=$('clist');
+  try{
+    var r=await fetch(API+'/feedback',{headers:{'X-Admin-Password':pw},cache:'no-store'});
+    if(r.status===401){clearPw();location.reload();return}
+    if(r.status===404)throw new Error('Comments need the server update. Run deploy-worker.bat on your computer.');
+    var j=await r.json();if(!r.ok)throw new Error(j.error||'Could not load comments');
+    var list=j.comments||[],unread=list.filter(function(f){return !f.read}).length;
+    $('tabC').textContent=unread?'Comments ('+unread+')':'Comments';
+    if($('pane-c').hidden)return;
+    box.innerHTML='';
+    if(!list.length){box.append(el('div','loading','No comments yet. When a player leaves one under Cube Tetris, it shows up here.'));return}
+    list.forEach(function(f){box.append(cCard(f))});
+  }catch(e){if(!quiet||!$('pane-c').hidden){box.innerHTML='';box.append(el('div','loading',e.message||"Couldn't load comments."))}}
+}
+$('cAllRead').addEventListener('click',function(){cPost('all-read',{})});
 
 $('logout').addEventListener('click',function(){clearPw();location.reload()});
 
