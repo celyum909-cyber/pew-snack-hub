@@ -3,7 +3,7 @@
    Tapping it opens the Cube Tetris test game (cube/index.html) full screen:
    - a bar on top: the game name, "LIMITED-TIME TEST BUILD", and × to close
    - a "Leave a comment" tab under the game, tappable any time while playing. Comments go to the server
-     and only the store owner login can read them (owner app → Comments).
+     and only the manager login can read them (manager app → Comments).
    Loaded by pew-catalog.js. To remove it, delete the "pew-cube.js" block at the bottom of pew-catalog.js. */
 (function(){
   var API = 'https://pew-deal.celyum909.workers.dev';
