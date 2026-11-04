@@ -88,6 +88,7 @@
   .ord-meta{font-size:12px;color:var(--ink-faint);margin:2px 0 6px}.ord-items{margin:6px 0;padding-left:18px;font-size:15px;line-height:1.5}
   .ord-total{font-weight:800;font-size:14px}.ord-note{margin-top:6px;font-size:13px;font-style:italic;color:var(--ink-dim)}
   .ord-act{display:flex;gap:8px;margin-top:12px}.ord-act .btn{flex:1;width:auto;margin:0;padding:12px}.btn-line{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+  .fb-text{white-space:pre-wrap;font-size:15px;line-height:1.5;margin:6px 0 2px;word-break:break-word}
   .ord-empty{color:var(--ink-dim);font-size:14px;line-height:1.5;padding:18px 4px}
   /* rewards punch */
   .tabs button{padding:12px 6px}
@@ -143,7 +144,7 @@
       <div class="brand"><img src="owner-icon-192.png" alt="">PEW <span class="two">SNACK HUB</span> <span class="tag">OWNER</span></div>
       <div class="top-links"><a href="./#deal" target="_blank" rel="noopener">View site</a><a href="#" id="logout">Log out</a></div>
     </div>
-    <div class="tabs"><button type="button" id="tab-deal" class="on">Deal of the Day</button><button type="button" id="tab-orders">Orders</button><!-- PUNCH TAB OFF: delete  style="display:none"  below to show the Punch tab again --><button type="button" id="tab-punch" style="display:none">Punch</button></div>
+    <div class="tabs"><button type="button" id="tab-deal" class="on">Deal of the Day</button><button type="button" id="tab-orders">Orders</button><button type="button" id="tab-fb">Comments</button><!-- PUNCH TAB OFF: delete  style="display:none"  below to show the Punch tab again --><button type="button" id="tab-punch" style="display:none">Punch</button></div>
     <div id="pane-punch" hidden>
       <h1>Rewards Punch</h1>
       <p class="sub">For a purchase of <b>$10 or more</b>, tap the button and let the customer scan the code with their phone. Each code gives 1 punch and works only once.</p>
@@ -157,6 +158,12 @@
         <button class="pun-big" id="pun-next" type="button">Next customer</button>
         <button class="btn btn-red" id="pun-cancel" type="button" style="background:var(--surface-2);border:1px solid var(--line)">Cancel</button>
       </div>
+    </div>
+    <div id="pane-fb" hidden>
+      <h1>Game Comments</h1>
+      <p class="sub">What players typed into <b>Leave a comment</b> under the Cube Tetris test game. Only this owner login can see them.</p>
+      <div id="fb-body"><div class="ord-empty">Loading comments…</div></div>
+      <button class="btn btn-red" id="fb-allread" type="button">Mark all as read</button>
     </div>
     <div id="pane-orders" hidden>
       <h1>Pickup Orders</h1>
@@ -412,15 +419,54 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   function mk(t, c, x){ var e = document.createElement(t); if(c) e.className = c; if(x != null) e.textContent = x; return e; }
   function showTab(t){
     tab = t;
-    $('tab-deal').className = t === 'deal' ? 'on' : ''; $('tab-orders').className = t === 'orders' ? 'on' : ''; $('tab-punch').className = t === 'punch' ? 'on' : '';
-    $('pane-deal').hidden = t !== 'deal'; $('pane-orders').hidden = t !== 'orders'; $('pane-punch').hidden = t !== 'punch';
+    $('tab-deal').className = t === 'deal' ? 'on' : ''; $('tab-orders').className = t === 'orders' ? 'on' : ''; $('tab-fb').className = t === 'fb' ? 'on' : ''; $('tab-punch').className = t === 'punch' ? 'on' : '';
+    $('pane-deal').hidden = t !== 'deal'; $('pane-orders').hidden = t !== 'orders'; $('pane-fb').hidden = t !== 'fb'; $('pane-punch').hidden = t !== 'punch';
     savebar.hidden = (t !== 'deal') || editor.hidden;
     if(t === 'orders') loadOrders();
+    if(t === 'fb') loadFeedback();
   }
   $('tab-deal').addEventListener('click', function(){ showTab('deal'); });
   $('tab-orders').addEventListener('click', function(){ showTab('orders'); });
   $('orders-refresh').addEventListener('click', function(){ loadOrders(); });
   $('tab-punch').addEventListener('click', function(){ showTab('punch'); });
+  $('tab-fb').addEventListener('click', function(){ showTab('fb'); });
+
+  // ---------------- game comments (private feedback from the Cube Tetris test game) ----------------
+  var GAME_NAME = {cube: 'Cube Tetris', backyard: 'Backyard Toss'}, PHONE = {i: 'iPhone', a: 'Android', o: 'computer'};
+  function fbPost(path, body, btn){
+    if(btn) btn.disabled = true;
+    return fetch(api + '/feedback/' + path, {method: 'POST', headers: {'X-Admin-Password': getPw(), 'Content-Type': 'application/json'}, body: JSON.stringify(body || {})})
+      .then(function(r){ if(r.status === 401){ setPw(''); showGate('Your password changed — please log in again.'); return; } loadFeedback(true); })
+      .catch(function(){ if(btn) btn.disabled = false; });
+  }
+  function fbCard(f){
+    var c = mk('div', 'ord ' + (f.read ? 'ord-done' : 'ord-new')), h = mk('div', 'ord-h');
+    h.append(mk('b', null, f.name || 'Someone'), mk('span', 'ord-st', f.read ? 'Read' : 'NEW')); c.append(h);
+    c.append(mk('div', 'ord-meta', when(f.at) + ' · ' + (GAME_NAME[f.game] || f.game) + (PHONE[f.p] ? ' · ' + PHONE[f.p] : '')));
+    var t = mk('div', 'fb-text', f.text); c.append(t);
+    var a = mk('div', 'ord-act');
+    var r = mk('button', 'btn btn-line', f.read ? 'Mark unread' : 'Mark read'); r.type = 'button';
+    r.addEventListener('click', function(){ fbPost(f.id, {read: !f.read}, r); });
+    var d = mk('button', 'btn btn-line', 'Delete'); d.type = 'button';
+    d.addEventListener('click', function(){ if(d.dataset.arm){ fbPost(f.id, {delete: true}, d); } else { d.dataset.arm = '1'; d.textContent = 'Tap again to delete'; setTimeout(function(){ delete d.dataset.arm; d.textContent = 'Delete'; }, 3000); } });
+    a.append(r, d); c.append(a); return c;
+  }
+  function loadFeedback(quiet){
+    var box = $('fb-body');
+    return fetch(api + '/feedback', {headers: {'X-Admin-Password': getPw()}, cache: 'no-store'})
+      .then(function(r){ if(r.status === 401){ setPw(''); showGate('Your password changed — please log in again.'); return null; } if(r.status === 404) throw new Error('Comments need the server update. Run deploy-worker.bat on your computer.'); return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || 'Could not load comments'); return j; }); })
+      .then(function(j){
+        if(!j) return;
+        var list = j.comments || [], unread = list.filter(function(f){ return !f.read; }).length;
+        $('tab-fb').textContent = unread ? 'Comments (' + unread + ')' : 'Comments';
+        if(tab !== 'fb') return;
+        box.textContent = '';
+        if(!list.length){ box.append(mk('div', 'ord-empty', 'No comments yet. When a player leaves one under Cube Tetris, it shows up here.')); return; }
+        list.forEach(function(f){ box.append(fbCard(f)); });
+      })
+      .catch(function(e){ if(!quiet || tab === 'fb'){ box.textContent = ''; box.append(mk('div', 'ord-empty', (e && e.message) || "Couldn't load comments. Check your connection.")); } });
+  }
+  $('fb-allread').addEventListener('click', function(){ fbPost('all-read', {}, null); });
 
   // ---------------- rewards punch: one-time QR code ----------------
   // The QR opens the store website with ?punch=CODE; the customer's phone redeems it once.
@@ -512,7 +558,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       })
       .catch(function(e){ if(!quiet){ box.textContent = ''; box.append(mk('div', 'ord-empty', (e && e.message) || "Couldn't load orders. Check your connection.")); } });
   }
-  function startWatch(){ if(ordTimer) return; ordTimer = setInterval(function(){ if(!document.hidden) loadOrders(true); }, 15000); loadOrders(true); }
+  var fbTick = 0;
+  function startWatch(){ if(ordTimer) return; ordTimer = setInterval(function(){ if(document.hidden) return; loadOrders(true); if(++fbTick % 4 === 0) loadFeedback(true); }, 15000); loadOrders(true); loadFeedback(true); }
 
   // --- start: skip the login if this phone is remembered
   var saved = getPw();

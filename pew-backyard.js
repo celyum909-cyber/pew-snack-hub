@@ -5,7 +5,7 @@
 (function(){
   var css = document.createElement('style');
   css.textContent =
-    '#bt-play{position:relative;z-index:4;display:block;width:max-content;margin:4px 0 -22px 16px;padding:3px;border:0;background:linear-gradient(90deg,#2f8f3a,#ffe340);transform:skewY(-6deg);filter:drop-shadow(0 8px 10px #0008);cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit}' +
+    '#bt-play{position:relative;z-index:4;display:inline-block;vertical-align:top;width:max-content;margin:4px 0 -22px 16px;padding:3px;border:0;background:linear-gradient(90deg,#2f8f3a,#ffe340);transform:skewY(-6deg);filter:drop-shadow(0 8px 10px #0008);cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit}' +
     '#bt-play span{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;background:#020203;color:#ffe340;font-size:13px;font-weight:950;letter-spacing:1px}' +
     '#bt-play b{color:#fff;font-size:11px}' +
     /* when the NFL ticker is folded to its tag, PLAY sits beside it on the same slanted line */
