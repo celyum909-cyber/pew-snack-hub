@@ -85,6 +85,11 @@ h2.grp{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--
 .chart{display:flex;align-items:flex-end;gap:4px;height:110px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 10px 8px}
 .chart div{flex:1;background:var(--red);border-radius:4px 4px 0 0;min-height:2px;position:relative}
 .chart div.z{background:var(--line)}
+.games-h{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--yellow);margin:26px 2px 10px}
+.game{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.game h3{margin:0 0 10px;font-size:17px}.game .stats-grid{margin-bottom:12px}.game .stat{background:var(--surface2)}.game .stat b{font-size:24px}
+.game .chart{height:80px;background:var(--surface2)}.game .chart.hrs div{background:var(--yellow)}.game .chart.hrs div.z{background:var(--line)}
+.busy{font-size:14px;margin:4px 2px 8px}.busy b{color:var(--yellow)}
 .axis{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin:6px 4px 14px}
 
 .groups{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -465,7 +470,38 @@ async function loadStats(){
     j.series.forEach(function(x){var b=el('div',x.visitors?'':'z');b.style.height=Math.max(2,Math.round(x.visitors/max*100))+'%';b.title=x.d+': '+x.visitors+' people';ch.append(b)});
     box.append(el('div','hint','People per day, last 14 days'),ch);
     var ax=el('div','axis');ax.append(el('span',null,j.series[0].d.slice(5)),el('span',null,'today'));box.append(ax);
+    loadGameStats(box);
   }catch(e){box.innerHTML='';box.append(el('div','loading',e.message||"Couldn't load the numbers."))}
+}
+
+// ---------------- GAME STATS (anonymous: plays and how many phones, per game) ----------------
+function gameName(k){return GAME_NAME[k]||k.replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()})}
+function hourName(h){return (h%12||12)+(h<12?' AM':' PM')}
+function bars(vals,cls,title){var ch=el('div','chart'+(cls?' '+cls:'')),max=Math.max.apply(null,vals.concat([1]));vals.forEach(function(v,i){var b=el('div',v?'':'z');b.style.height=Math.max(2,Math.round(v/max*100))+'%';b.title=title(i,v);ch.append(b)});return ch}
+async function loadGameStats(box){
+  var sec=el('div');box.append(sec);
+  sec.append(el('div','games-h','Games'));
+  try{
+    var r=await fetch(API+'/game/stats',{headers:{'X-Admin-Password':pw},cache:'no-store'});
+    if(r.status===404)throw new Error('Game stats need the server update. Run deploy-worker.bat on your computer.');
+    var j=await r.json();if(!r.ok)throw new Error(j.error||'Could not load game stats');
+    var keys=Object.keys(j.games||{}).sort(function(a,b){return j.games[b].d30.plays-j.games[a].d30.plays});
+    if(!keys.length){sec.append(el('div','hint','No games played yet. Each time someone taps PLAY or BETA, it shows up here under that game\'s name.'));return}
+    keys.forEach(function(k){
+      var x=j.games[k],c=el('div','game');c.append(el('h3',null,gameName(k)));
+      var g=el('div','stats-grid');
+      g.append(statBox(x.today.plays+' / '+x.today.players,'today: plays / phones'),statBox(x.d7.plays+' / '+x.d7.players,'last 7 days: plays / phones'),statBox(x.d30.plays+' / '+x.d30.players,'last 30 days: plays / phones'),statBox(x.all.plays,'plays since '+j.since.slice(5).replace('-','/')));
+      c.append(g);
+      c.append(bars(x.series.map(function(s){return s.plays}),'',function(i,v){return x.series[i].d+': '+v+' plays'}));
+      var ax=el('div','axis');ax.append(el('span',null,'Plays per day, last 14 days'),el('span',null,'today'));c.append(ax);
+      var top=x.hours.indexOf(Math.max.apply(null,x.hours));
+      var bz=el('div','busy');if(x.hours[top]){bz.append('Busiest time (last 30 days): ');bz.append(el('b',null,hourName(top)+' to '+hourName((top+1)%24)))}else bz.textContent='No plays in the last 30 days.';c.append(bz);
+      c.append(bars(x.hours,'hrs',function(i,v){return hourName(i)+': '+v+' plays'}));
+      var ah=el('div','axis');ah.append(el('span',null,'12 AM'),el('span',null,'6 AM'),el('span',null,'12 PM'),el('span',null,'6 PM'),el('span',null,'11 PM'));c.append(ah);
+      sec.append(c);
+    });
+    sec.append(el('div','hint','Counts are anonymous: a play is one tap on a game button; phones are counted by the same random code as above, never by name. A new game shows up here on its own once its button is tapped.'));
+  }catch(e){sec.append(el('div','hint',e.message||"Couldn't load game stats."))}
 }
 
 // ---------------- COMMENTS (private feedback from the Cube Tetris test game) ----------------
