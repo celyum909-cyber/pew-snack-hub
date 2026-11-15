@@ -79,6 +79,12 @@
   var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
   if(standalone)send('app');
   window.addEventListener('appinstalled',function(){send('installed','ever')});
+  /* Game plays: any button with data-pew-game="<name>" (the PLAY and BETA buttons) counts one play when tapped.
+     A new game only needs that attribute on its button; it then shows up under its own name in the manager app's Stats. */
+  document.addEventListener('click',function(ev){
+    var b=ev.target&&ev.target.closest&&ev.target.closest('[data-pew-game]');if(!b)return;
+    try{fetch(W+'/game/play',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,g:b.getAttribute('data-pew-game'),p:plat}),keepalive:true}).catch(function(){})}catch(x){}
+  },true);
 })();
 
 /* Pickup ordering pilot: pew-orders.js (delete this block to remove ordering from the app) */
@@ -97,7 +103,7 @@
 (function(){try{var s=document.createElement('script');s.src='pew-nfl.js?v=4';s.defer=true;document.body.appendChild(s)}catch(e){}})();
 
 /* Backyard Toss game: pew-backyard.js (small PLAY button above the NFL ticker; delete this block to remove it) */
-(function(){try{var s=document.createElement('script');s.src='pew-backyard.js?v=4';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+(function(){try{var s=document.createElement('script');s.src='pew-backyard.js?v=5';s.defer=true;document.body.appendChild(s)}catch(e){}})();
 
 /* Cube Tetris test game: pew-cube.js (BETA button beside PLAY, with a Leave a comment tab; delete this block to remove it) */
-(function(){try{var s=document.createElement('script');s.src='pew-cube.js?v=1';s.defer=true;document.body.appendChild(s)}catch(e){}})();
+(function(){try{var s=document.createElement('script');s.src='pew-cube.js?v=2';s.defer=true;document.body.appendChild(s)}catch(e){}})();

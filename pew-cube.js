@@ -86,7 +86,7 @@
     if (!document.getElementById('deal')) return;
     document.head.appendChild(css);
     btn = document.createElement('button');
-    btn.id = 'ct-play'; btn.type = 'button'; btn.setAttribute('aria-label', 'Play Cube Tetris, a test game');
+    btn.id = 'ct-play'; btn.type = 'button'; btn.setAttribute('data-pew-game', 'cube'); // counted in the manager app's Stats btn.setAttribute('aria-label', 'Play Cube Tetris, a test game');
     btn.innerHTML = '<span>🧊 BETA <b>▶</b></span>';
     ov = document.createElement('section');
     ov.id = 'ct-ov'; ov.hidden = true; ov.setAttribute('aria-label', 'Cube Tetris test game');

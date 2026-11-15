@@ -42,7 +42,7 @@
     if (!document.getElementById('deal')) return;
     document.head.appendChild(css);
     btn = document.createElement('button');
-    btn.id = 'bt-play'; btn.type = 'button'; btn.setAttribute('aria-label', 'Play Backyard Toss');
+    btn.id = 'bt-play'; btn.type = 'button'; btn.setAttribute('data-pew-game', 'backyard'); // counted in the manager app's Stats btn.setAttribute('aria-label', 'Play Backyard Toss');
     btn.innerHTML = '<span>🏈 PLAY <b>▶</b></span>';
     ov = document.createElement('section');
     ov.id = 'bt-ov'; ov.hidden = true; ov.setAttribute('aria-label', 'Backyard Toss game');
